@@ -586,7 +586,6 @@ let entries = [];      // entries in current pool
 let isCommissioner = false;
 let editingEntryId = null;
 let pollTimer = null;
-let espnTournaments = [];
 let expandedEntryIds = new Set();  // tracks which leaderboard rows are expanded, preserved across re-renders
 
 // ===================================================================
@@ -904,13 +903,6 @@ async function deletePoolDB(id) { const { error } = await sb.from('pools').delet
 // ===================================================================
 // ESPN API
 // ===================================================================
-async function fetchEspnSchedule() {
-  // Schedule list isn't critical; the proxy/dropdown is optional.
-  // We keep the dropdown minimal — just "current" or a manual date-key input would also work.
-  // Returning empty here is fine; the app still functions with the auto-pick default.
-  return [];
-}
-
 // Fetch the current (or a specific week's) golf leaderboard via our Netlify Function proxy.
 // dateKey is optional (YYYYMMDD) — leave null to get whatever PGA tournament is currently live.
 async function fetchEspnLeaderboard(key) {
@@ -1986,12 +1978,6 @@ document.getElementById('delete-pool-btn').addEventListener('click', async () =>
 // BOOT
 // ===================================================================
 async function boot() {
-  // Load ESPN schedule in background (non-blocking)
-  fetchEspnSchedule().then(list => {
-    espnTournaments = list;
-    if (pool) renderSetup();
-  });
-
   const urlPin = getPinFromUrl();
   if (urlPin) {
     document.getElementById('masthead-sub').innerHTML = '<span>Loading pool...</span>';
