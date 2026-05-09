@@ -8,6 +8,7 @@
 // Optional query params:
 //   ?date=YYYYMMDD   — fetch a specific tournament week (Thursday of that tourney)
 //   ?debug=1         — include tried-URLs + raw response meta for troubleshooting
+//   ?raw=1           — dump the first competitor's ESPN payload verbatim (shape debugging)
 
 // In-memory cache (survives warm invocations, resets on cold start)
 let cache = { key: null, data: null, at: 0 };
