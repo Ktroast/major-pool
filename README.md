@@ -54,13 +54,15 @@ Supabase credentials and the ESPN proxy URL are embedded in `index.html` — no 
 
 ## Running tests
 
-The proxy function has a unit test suite using Node's built-in test runner (no dependencies):
+Three test suites use Node's built-in test runner (no dependencies):
 
 ```bash
-node --test tests/normalize.test.js
+node --test tests/normalize.test.js   # ESPN proxy parsing (extractRoundScores, normalize)
+node --test tests/scoring.test.js     # Scoring engine (entryBest4, effectiveRounds, cutPenalty)
+node --test tests/matching.test.js    # Fuzzy name matching (findBestMatch, normalizeName)
 ```
 
-Tests cover `extractRoundScores` and `normalize` in `golf-leaderboard.js` — the ESPN data parsing logic where most edge cases live.
+The scoring and matching tests extract functions directly from `index.html` via Node's `vm` module (`tests/helpers/load-scoring.js`), so they always run against the live source.
 
 ---
 
@@ -149,7 +151,11 @@ major-pool/
 │   └── functions/
 │       └── golf-leaderboard.js         # ESPN proxy (CommonJS Netlify Function)
 ├── tests/
-│   └── normalize.test.js               # Proxy unit tests (node:test, no dependencies)
+│   ├── normalize.test.js               # Proxy unit tests (node:test, no dependencies)
+│   ├── scoring.test.js                 # Scoring engine unit tests
+│   ├── matching.test.js                # Fuzzy name matching unit tests
+│   └── helpers/
+│       └── load-scoring.js             # Extracts scoring fns from index.html for tests
 ├── netlify.toml                        # Netlify build + functions config
 ├── AUDIT.md                            # Code audit with refactor recommendations
 └── CLAUDE_CODE_HANDOFF.md              # Architecture notes and feature roadmap
