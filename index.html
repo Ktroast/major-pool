@@ -1598,8 +1598,9 @@ async function pullLiveScores(silent) {
         // ESPN drops withdrawn players from the leaderboard entirely.
         // Override is preserved if the commissioner already set one manually.
         if (tournamentInProgress) {
-          g.status = 'wd';
-          g.rounds = [null, null, null, null];
+          const manualOverride = pool.score_overrides?.[String(g.rank)];
+          if (!manualOverride?.status) g.status = 'wd';
+          if (!manualOverride?.rounds) g.rounds = [null, null, null, null];
           g.unmatched = true;
         } else {
           g.unmatched = true;
