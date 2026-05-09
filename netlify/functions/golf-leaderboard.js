@@ -217,6 +217,9 @@ function normalize(raw) {
   return { tournament, players, reason: players.length === 0 ? 'no-names' : undefined };
 }
 
+exports.extractRoundScores = extractRoundScores;
+exports.normalize = normalize;
+
 exports.handler = async function(event) {
   const qs = event.queryStringParameters || {};
   const dateKey = (qs.date || '').trim() || null;
