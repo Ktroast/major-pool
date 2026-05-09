@@ -963,23 +963,39 @@ function renderEntriesList() {
   const wrap = document.getElementById('entries-list');
   document.getElementById('tab-entries-count').textContent = entries.length;
   if (entries.length === 0) { wrap.innerHTML = `<div class="empty"><div class="empty-mark">—</div><div class="empty-text">No entries yet</div></div>`; return; }
-  wrap.innerHTML = entries.map(e => {
+  wrap.innerHTML = '';
+  entries.forEach(e => {
     const picksStr = e.picks.map(r => { const g = golferByRank(r, pool); return g ? `${r}. ${g.name}` : `#${r} (unknown)`; }).join(' · ');
     const canEdit = isCommissioner || e.name.toLowerCase() === getLastName().toLowerCase();
-    return `
-      <div class="entry-row">
-        <div>
-          <div class="entry-name">${escapeHtml(e.name)}</div>
-          <div class="entry-picks">${escapeHtml(picksStr)}</div>
-          <div class="entry-tb">Tiebreaker: ${fmtToParDiff(e.tiebreaker)}</div>
-        </div>
-        <div style="display:flex; gap: 6px;">
-          ${canEdit ? `<button class="btn btn-secondary btn-small" onclick="editEntry('${e.id}')">Edit</button>` : ''}
-          ${isCommissioner ? `<button class="btn btn-danger btn-small" onclick="deleteEntry('${e.id}')">Delete</button>` : ''}
-        </div>
-      </div>
-    `;
-  }).join('');
+
+    const row = document.createElement('div');
+    row.className = 'entry-row';
+
+    const info = document.createElement('div');
+    info.innerHTML = `<div class="entry-name">${escapeHtml(e.name)}</div><div class="entry-picks">${escapeHtml(picksStr)}</div><div class="entry-tb">Tiebreaker: ${fmtToParDiff(e.tiebreaker)}</div>`;
+
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display:flex; gap: 6px;';
+
+    if (canEdit) {
+      const editBtn = document.createElement('button');
+      editBtn.className = 'btn btn-secondary btn-small';
+      editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', () => editEntry(e.id));
+      actions.appendChild(editBtn);
+    }
+    if (isCommissioner) {
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn btn-danger btn-small';
+      delBtn.textContent = 'Delete';
+      delBtn.addEventListener('click', () => deleteEntry(e.id));
+      actions.appendChild(delBtn);
+    }
+
+    row.appendChild(info);
+    row.appendChild(actions);
+    wrap.appendChild(row);
+  });
 }
 
 // ===================================================================
@@ -1557,12 +1573,12 @@ document.getElementById('save-entry-btn').addEventListener('click', async () => 
 
 document.getElementById('cancel-edit-btn').addEventListener('click', () => { editingEntryId = null; renderPickForm(); });
 
-window.editEntry = function(id) {
+function editEntry(id) {
   editingEntryId = id;
   showTab('picks');
   renderPickForm();
-};
-window.deleteEntry = async function(id) {
+}
+async function deleteEntry(id) {
   const e = entries.find(x => x.id === id);
   if (!e) return;
   if (!confirm(`Delete ${e.name}'s entry?`)) return;
