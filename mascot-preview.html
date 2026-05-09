@@ -36,11 +36,31 @@
   .smoke2 { animation: drift2 2.8s ease-in-out infinite 0.4s; }
   .smoke3 { animation: drift3 2.4s ease-in-out infinite 0.8s; }
 
-  @keyframes ember {
-    0%, 100% { opacity: 0.85; }
-    50%       { opacity: 0.5; }
+  /* Drink */
+  .mascot-beer-mug { transform-box: fill-box; transform-origin: right center; animation: mascot-drink-anim 10s ease-in-out infinite; }
+  @keyframes mascot-drink-anim {
+    0%, 18%, 100% { transform: none; }
+    5%            { transform: rotate(28deg); }
+    10%           { transform: rotate(36deg); }
+    15%           { transform: rotate(22deg); }
   }
-  .ember { animation: ember 1.8s ease-in-out infinite; }
+  /* Puff ember */
+  .mascot-ember-group { transform-box: fill-box; transform-origin: center center; animation: mascot-ember-puff 10s ease-in-out infinite 5s; }
+  @keyframes mascot-ember-puff {
+    0%, 18%, 100% { transform: scale(1); }
+    5%            { transform: scale(1.5); }
+    10%           { transform: scale(1.6); }
+    15%           { transform: scale(1.2); }
+  }
+  /* Puff cloud */
+  .mascot-puff-cloud { transform-box: fill-box; transform-origin: center bottom; opacity: 0; animation: mascot-puff-cloud-anim 10s ease-in-out infinite 5s; }
+  @keyframes mascot-puff-cloud-anim {
+    0%, 18%, 100% { opacity: 0;    transform: scale(0.3) translateY(8px); }
+    5%            { opacity: 0.65; transform: scale(0.95) translateY(0); }
+    10%           { opacity: 0.55; transform: scale(1.1)  translateY(-5px); }
+    15%           { opacity: 0.25; transform: scale(1.3)  translateY(-10px); }
+    17%           { opacity: 0;    transform: scale(1.4)  translateY(-14px); }
+  }
 </style>
 </head>
 <body>
@@ -74,7 +94,7 @@
         transform="rotate(14, 35, 171)"/>
 
   <!-- Beer mug -->
-  <g transform="translate(1, 168)">
+  <g class="mascot-beer-mug" transform="translate(1, 168)">
     <ellipse cx="4"  cy="10" rx="5"   ry="6.5" fill="white" stroke="#ddd" stroke-width="1"/>
     <ellipse cx="12" cy="6"  rx="6"   ry="7.5" fill="white" stroke="#ddd" stroke-width="1"/>
     <ellipse cx="21" cy="7"  rx="6"   ry="7"   fill="white" stroke="#ddd" stroke-width="1"/>
@@ -133,9 +153,19 @@
   <g transform="translate(162, 153) rotate(-10)">
     <rect x="0"  y="-3.5" width="10" height="7" rx="2.5" fill="#c07848" stroke="#a05830" stroke-width="0.8"/>
     <rect x="9"  y="-3.5" width="28" height="7" rx="1.5" fill="#f6f1e8" stroke="#ddd"    stroke-width="0.8"/>
-    <circle cx="38" cy="0" r="5"   fill="#ff4800" class="ember"/>
-    <circle cx="38" cy="0" r="3"   fill="#ff9018"/>
-    <circle cx="37" cy="-1" r="1.4" fill="#ffe070" opacity="0.9"/>
+    <g class="mascot-ember-group">
+      <circle cx="38" cy="0"  r="5"   fill="#ff4800" opacity="0.85"/>
+      <circle cx="38" cy="0"  r="3"   fill="#ff9018"/>
+      <circle cx="37" cy="-1" r="1.4" fill="#ffe070" opacity="0.9"/>
+    </g>
+  </g>
+  <!-- Puff cloud -->
+  <g class="mascot-puff-cloud">
+    <circle cx="213" cy="130" r="11" fill="#c0c0c0"/>
+    <circle cx="225" cy="121" r="13" fill="#c0c0c0"/>
+    <circle cx="236" cy="126" r="10" fill="#c0c0c0"/>
+    <circle cx="227" cy="137" r="11" fill="#c0c0c0"/>
+    <circle cx="216" cy="117" r="9"  fill="#c0c0c0"/>
   </g>
 </svg>
 

@@ -330,3 +330,43 @@
 .masthead-mascot { display: block; margin: 10px auto 2px; }
 .mascot-empty    { display: block; margin: 0 auto 16px; }
 .mascot-fetching { text-align: center; padding: 28px 0; color: var(--ink-soft); font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; }
+
+/* Drink: every 10s, action in first ~2s of cycle */
+.mascot-beer-mug {
+  transform-box: fill-box;
+  transform-origin: right center;
+  animation: mascot-drink-anim 10s ease-in-out infinite;
+}
+@keyframes mascot-drink-anim {
+  0%, 18%, 100% { transform: none; }
+  5%            { transform: rotate(28deg); }
+  10%           { transform: rotate(36deg); }
+  15%           { transform: rotate(22deg); }
+}
+
+/* Puff: every 10s offset 5s, ember glows + cloud billows */
+.mascot-ember-group {
+  transform-box: fill-box;
+  transform-origin: center center;
+  animation: mascot-ember-puff 10s ease-in-out infinite 5s;
+}
+@keyframes mascot-ember-puff {
+  0%, 18%, 100% { transform: scale(1); }
+  5%            { transform: scale(1.5); }
+  10%           { transform: scale(1.6); }
+  15%           { transform: scale(1.2); }
+}
+
+.mascot-puff-cloud {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  opacity: 0;
+  animation: mascot-puff-cloud-anim 10s ease-in-out infinite 5s;
+}
+@keyframes mascot-puff-cloud-anim {
+  0%, 18%, 100% { opacity: 0;    transform: scale(0.3) translateY(8px); }
+  5%            { opacity: 0.65; transform: scale(0.95) translateY(0); }
+  10%           { opacity: 0.55; transform: scale(1.1)  translateY(-5px); }
+  15%           { opacity: 0.25; transform: scale(1.3)  translateY(-10px); }
+  17%           { opacity: 0;    transform: scale(1.4)  translateY(-14px); }
+}
