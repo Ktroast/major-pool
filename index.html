@@ -328,6 +328,9 @@ document.getElementById('modal-bg').addEventListener('click', e => { if (e.targe
 // ===================================================================
 // NAME NORMALIZATION & FUZZY MATCHING
 // ===================================================================
+function roundsToStrokes(rounds, par) {
+  return rounds.reduce((a, r) => a + (par + r), 0);
+}
 function normalizeName(s) {
   if (!s) return '';
   return s.toLowerCase()
@@ -446,7 +449,7 @@ function rawTotal(g, par, pool) {
   if (!g) return null;
   const rs = effectiveRounds(g, pool).map(r => (r === '' || r === null || r === undefined) ? null : Number(r));
   if (rs.some(r => r === null || isNaN(r))) return null;
-  return rs.reduce((a, b) => a + (par + b), 0);
+  return roundsToStrokes(rs, par);
 }
 function cutPenalty(par, pool) {
   const made = pool.golfers.filter(g => effectiveStatus(g, pool) === 'active' && roundsComplete(g, pool));
@@ -481,7 +484,7 @@ function entryBest4(entry, par, pool) {
     if (played.length === 0) {
       return { rank, name: g.name, status, score: null, roundsScored: 0 };
     }
-    const score = played.reduce((a, b) => a + (par + b), 0);
+    const score = roundsToStrokes(played, par);
     return { rank, name: g.name, status, score, roundsScored: played.length, isPenalty: false };
   });
 
