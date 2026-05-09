@@ -52,6 +52,18 @@ Supabase credentials and the ESPN proxy URL are embedded in `index.html` — no 
 
 ---
 
+## Running tests
+
+The proxy function has a unit test suite using Node's built-in test runner (no dependencies):
+
+```bash
+node --test tests/normalize.test.js
+```
+
+Tests cover `extractRoundScores` and `normalize` in `golf-leaderboard.js` — the ESPN data parsing logic where most edge cases live.
+
+---
+
 ## Adding a tournament
 
 1. Open the pool as commissioner (URL must include the commissioner key)
@@ -132,9 +144,12 @@ Overrides always win over ESPN-sourced data. Set them on the **Scores tab**.
 ```
 major-pool/
 ├── index.html                          # Entire frontend — HTML + CSS + JS
+├── style.css                           # Extracted stylesheet
 ├── netlify/
 │   └── functions/
 │       └── golf-leaderboard.js         # ESPN proxy (CommonJS Netlify Function)
+├── tests/
+│   └── normalize.test.js               # Proxy unit tests (node:test, no dependencies)
 ├── netlify.toml                        # Netlify build + functions config
 ├── AUDIT.md                            # Code audit with refactor recommendations
 └── CLAUDE_CODE_HANDOFF.md              # Architecture notes and feature roadmap
