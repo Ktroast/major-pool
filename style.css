@@ -338,10 +338,11 @@
   animation: mascot-drink-anim 10s ease-in-out infinite;
 }
 @keyframes mascot-drink-anim {
-  0%, 18%, 100% { transform: none; }
-  5%            { transform: rotate(28deg); }
-  10%           { transform: rotate(36deg); }
-  15%           { transform: rotate(22deg); }
+  0%, 100%  { transform: none; }
+  7%        { transform: rotate(20deg); }
+  13%       { transform: rotate(36deg); }
+  18%       { transform: rotate(36deg); }
+  26%       { transform: none; }
 }
 
 /* Puff: every 10s offset 5s, ember glows + cloud billows */

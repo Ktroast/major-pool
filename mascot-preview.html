@@ -39,10 +39,11 @@
   /* Drink */
   .mascot-beer-mug { transform-box: fill-box; transform-origin: right center; animation: mascot-drink-anim 10s ease-in-out infinite; }
   @keyframes mascot-drink-anim {
-    0%, 18%, 100% { transform: none; }
-    5%            { transform: rotate(28deg); }
-    10%           { transform: rotate(36deg); }
-    15%           { transform: rotate(22deg); }
+    0%, 100%  { transform: none; }
+    7%        { transform: rotate(20deg); }
+    13%       { transform: rotate(36deg); }
+    18%       { transform: rotate(36deg); }
+    26%       { transform: none; }
   }
   /* Puff ember */
   .mascot-ember-group { transform-box: fill-box; transform-origin: center center; animation: mascot-ember-puff 10s ease-in-out infinite 5s; }
@@ -94,14 +95,16 @@
         transform="rotate(14, 35, 171)"/>
 
   <!-- Beer mug -->
-  <g class="mascot-beer-mug" transform="translate(1, 168)">
-    <ellipse cx="4"  cy="10" rx="5"   ry="6.5" fill="white" stroke="#ddd" stroke-width="1"/>
-    <ellipse cx="12" cy="6"  rx="6"   ry="7.5" fill="white" stroke="#ddd" stroke-width="1"/>
-    <ellipse cx="21" cy="7"  rx="6"   ry="7"   fill="white" stroke="#ddd" stroke-width="1"/>
-    <ellipse cx="30" cy="10" rx="4.5" ry="6"   fill="white" stroke="#ddd" stroke-width="1"/>
-    <rect x="0" y="10" width="34" height="44" rx="4" fill="url(#mg-beer)" stroke="#9a6c12" stroke-width="1.5"/>
-    <rect x="5" y="15" width="7"  height="32" rx="3.5" fill="white" opacity="0.18"/>
-    <path d="M34,20 Q50,20 50,32 Q50,46 34,46" fill="none" stroke="#9a6c12" stroke-width="4.5" stroke-linecap="round"/>
+  <g class="mascot-beer-mug">
+    <g transform="translate(1, 168)">
+      <ellipse cx="4"  cy="10" rx="5"   ry="6.5" fill="white" stroke="#ddd" stroke-width="1"/>
+      <ellipse cx="12" cy="6"  rx="6"   ry="7.5" fill="white" stroke="#ddd" stroke-width="1"/>
+      <ellipse cx="21" cy="7"  rx="6"   ry="7"   fill="white" stroke="#ddd" stroke-width="1"/>
+      <ellipse cx="30" cy="10" rx="4.5" ry="6"   fill="white" stroke="#ddd" stroke-width="1"/>
+      <rect x="0" y="10" width="34" height="44" rx="4" fill="url(#mg-beer)" stroke="#9a6c12" stroke-width="1.5"/>
+      <rect x="5" y="15" width="7"  height="32" rx="3.5" fill="white" opacity="0.18"/>
+      <path d="M34,20 Q50,20 50,32 Q50,46 34,46" fill="none" stroke="#9a6c12" stroke-width="4.5" stroke-linecap="round"/>
+    </g>
   </g>
 
   <!-- Right arm -->
