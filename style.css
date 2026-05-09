@@ -325,3 +325,8 @@
     .lb-picks .full-name { display: inline; }
     .lb-picks .short-name { display: none; }
   }
+
+/* ── Mascot ── */
+.masthead-mascot { display: block; margin: 10px auto 2px; }
+.mascot-empty    { display: block; margin: 0 auto 16px; }
+.mascot-fetching { text-align: center; padding: 28px 0; color: var(--ink-soft); font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; }
