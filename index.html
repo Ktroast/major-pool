@@ -406,13 +406,13 @@ function findBestMatch(target, candidates) {
 // ===================================================================
 // SCORING ENGINE (pure)
 // ===================================================================
-function golferByRank(rank) { return pool.golfers.find(g => g.rank === rank); }
-function roundsComplete(g) {
+function golferByRank(rank, pool) { return pool.golfers.find(g => g.rank === rank); }
+function roundsComplete(g, pool) {
   const overrides = pool.score_overrides?.[String(g.rank)];
   const rounds = overrides?.rounds ?? g.rounds ?? [null, null, null, null];
   return rounds.filter(r => r !== null && r !== '' && r !== undefined).length === 4;
 }
-function effectiveRounds(g) {
+function effectiveRounds(g, pool) {
   const overrides = pool.score_overrides?.[String(g.rank)];
   const raw = overrides?.rounds ?? g.rounds ?? [null, null, null, null];
   // Defensive: data written before the raw-vs-relative fix may have raw strokes stored.
@@ -425,7 +425,7 @@ function effectiveRounds(g) {
     return n >= 40 ? n - par : n;
   });
 }
-function effectiveStatus(g) {
+function effectiveStatus(g, pool) {
   const overrides = pool.score_overrides?.[String(g.rank)];
   if (overrides?.status) return overrides.status;
   return g.status || 'active';
@@ -433,7 +433,7 @@ function effectiveStatus(g) {
 // Returns the per-round metadata array {inProgress, holesPlayed} parallel to
 // effectiveRounds(). Manual overrides clear inProgress (manually-entered scores
 // are treated as completed).
-function effectiveRoundsMeta(g) {
+function effectiveRoundsMeta(g, pool) {
   const overrides = pool.score_overrides?.[String(g.rank)];
   if (overrides?.rounds) {
     // Manually-entered rounds are always considered complete
@@ -442,25 +442,25 @@ function effectiveRoundsMeta(g) {
   const meta = g.roundsMeta || [];
   return [0,1,2,3].map(i => meta[i] || null);
 }
-function rawTotal(g, par) {
+function rawTotal(g, par, pool) {
   if (!g) return null;
-  const rs = effectiveRounds(g).map(r => (r === '' || r === null || r === undefined) ? null : Number(r));
+  const rs = effectiveRounds(g, pool).map(r => (r === '' || r === null || r === undefined) ? null : Number(r));
   if (rs.some(r => r === null || isNaN(r))) return null;
   return rs.reduce((a, b) => a + (par + b), 0);
 }
-function cutPenalty(par) {
-  const made = pool.golfers.filter(g => effectiveStatus(g) === 'active' && roundsComplete(g));
+function cutPenalty(par, pool) {
+  const made = pool.golfers.filter(g => effectiveStatus(g, pool) === 'active' && roundsComplete(g, pool));
   if (made.length === 0) return null;
-  const max = Math.max(...made.map(g => rawTotal(g, par)));
+  const max = Math.max(...made.map(g => rawTotal(g, par, pool)));
   return max + 10;
 }
-function golferScore(g, par) {
+function golferScore(g, par, pool) {
   if (!g) return null;
-  const status = effectiveStatus(g);
-  if (status === 'mc' || status === 'wd') return cutPenalty(par);
-  return rawTotal(g, par);
+  const status = effectiveStatus(g, pool);
+  if (status === 'mc' || status === 'wd') return cutPenalty(par, pool);
+  return rawTotal(g, par, pool);
 }
-function entryBest4(entry, par) {
+function entryBest4(entry, par, pool) {
   // Pool rule: take the best 4 of 5 picks. Active (still-playing) picks
   // are the priority — only fall back to penalizing MC/WD picks if the
   // entry doesn't have 4 active picks to fill the best-4. So an entry
@@ -469,14 +469,14 @@ function entryBest4(entry, par) {
   // count one MC pick (which incurs the cut penalty). This matches the
   // pool's stated rule: "no penalty as long as you have four playing."
   const scoredPicks = entry.picks.map(rank => {
-    const g = golferByRank(rank);
+    const g = golferByRank(rank, pool);
     if (!g) return { rank, name: '?', status: null, score: null, roundsScored: 0 };
-    const status = effectiveStatus(g);
+    const status = effectiveStatus(g, pool);
     if (status === 'mc' || status === 'wd') {
       // Penalty score (used only if we're forced to include this pick)
-      return { rank, name: g.name, status, score: golferScore(g, par), roundsScored: 4, isPenalty: true };
+      return { rank, name: g.name, status, score: golferScore(g, par, pool), roundsScored: 4, isPenalty: true };
     }
-    const rs = effectiveRounds(g).map(r => (r === '' || r === null || r === undefined) ? null : Number(r));
+    const rs = effectiveRounds(g, pool).map(r => (r === '' || r === null || r === undefined) ? null : Number(r));
     const played = rs.filter(r => r !== null && !isNaN(r));
     if (played.length === 0) {
       return { rank, name: g.name, status, score: null, roundsScored: 0 };
@@ -685,7 +685,7 @@ function renderLeaderboard() {
     return;
   }
   const standings = entries.map(e => {
-    const { total, details, roundsScored, dropped } = entryBest4(e, par);
+    const { total, details, roundsScored, dropped } = entryBest4(e, par, pool);
     // toPar baseline is sum of (par × rounds-played) for each best-4 pick.
     // Picks with fewer rounds contribute less to both score and baseline, keeping math fair.
     const best4 = (details || []).filter(d => !d.isDropped && d.score !== null);
@@ -695,9 +695,9 @@ function renderLeaderboard() {
   });
 
   const leaderGolfer = [...pool.golfers]
-    .filter(g => effectiveStatus(g) === 'active' && roundsComplete(g))
-    .sort((a, b) => rawTotal(a, par) - rawTotal(b, par))[0];
-  const actualWinningToPar = leaderGolfer ? rawTotal(leaderGolfer, par) - par4 : null;
+    .filter(g => effectiveStatus(g, pool) === 'active' && roundsComplete(g, pool))
+    .sort((a, b) => rawTotal(a, par, pool) - rawTotal(b, par, pool))[0];
+  const actualWinningToPar = leaderGolfer ? rawTotal(leaderGolfer, par, pool) - par4 : null;
 
   standings.sort((a, b) => {
     if (a.total == null && b.total == null) return 0;
@@ -715,7 +715,7 @@ function renderLeaderboard() {
   const top = standings[0];
   document.getElementById('stat-leader').textContent = top.total !== null ? top.entry.name : '—';
   document.getElementById('stat-leader-score').textContent = top.total !== null ? fmtToParDiff(top.toPar) : '—';
-  const cp = cutPenalty(par);
+  const cp = cutPenalty(par, pool);
   document.getElementById('stat-cut-penalty').textContent = cp !== null ? fmtToPar(cp, par4) : '—';
   document.getElementById('stat-entry-count').textContent = String(entries.length);
 
@@ -731,9 +731,9 @@ function renderLeaderboard() {
       const statusTag = d.status === 'mc' ? ' <span class="status-tag status-cut">MC</span>' : d.status === 'wd' ? ' <span class="status-tag status-cut">WD</span>' : '';
       // Live progress indicator if this golfer is mid-round
       let liveTag = '';
-      const golfer = golferByRank(d.rank);
+      const golfer = golferByRank(d.rank, pool);
       if (golfer && d.status === 'active') {
-        const meta = effectiveRoundsMeta(golfer);
+        const meta = effectiveRoundsMeta(golfer, pool);
         const live = meta.find(m => m && m.inProgress);
         if (live) {
           const hp = (typeof live.holesPlayed === 'number') ? live.holesPlayed : null;
@@ -754,9 +754,9 @@ function renderLeaderboard() {
     let holesLeftToday = 0;
     let livePicksCount = 0;
     (s.details || []).filter(d => !d.isDropped && d.status === 'active').forEach(d => {
-      const g = golferByRank(d.rank);
+      const g = golferByRank(d.rank, pool);
       if (!g) return;
-      const meta = effectiveRoundsMeta(g);
+      const meta = effectiveRoundsMeta(g, pool);
       meta.forEach(m => {
         if (m && m.inProgress) {
           const hp = (typeof m.holesPlayed === 'number') ? m.holesPlayed : 0;
@@ -821,7 +821,7 @@ function renderLeaderboard() {
 // struck through, MC/WD golfers clearly marked, and a team best-4-of-5 total row.
 function buildRoundGrid(standing, par) {
   const entry = standing.entry;
-  const picks = entry.picks.map(rank => golferByRank(rank)).filter(Boolean);
+  const picks = entry.picks.map(rank => golferByRank(rank, pool)).filter(Boolean);
   if (picks.length === 0) {
     return `<div class="muted" style="text-align:center; padding: 8px;">No picks yet.</div>`;
   }
@@ -831,9 +831,9 @@ function buildRoundGrid(standing, par) {
 
   let rowsHtml = '';
   picks.forEach(g => {
-    const rounds = effectiveRounds(g);
-    const meta = effectiveRoundsMeta(g);
-    const status = effectiveStatus(g);
+    const rounds = effectiveRounds(g, pool);
+    const meta = effectiveRoundsMeta(g, pool);
+    const status = effectiveStatus(g, pool);
     const isDropped = g.rank === droppedRank;
     const isCut = status === 'mc' || status === 'wd';
     const cls = [];
@@ -926,7 +926,7 @@ function renderOwnership() {
 
   // Build sorted list: most picked first, ties broken by rank
   const rows = Array.from(counts.entries())
-    .map(([rank, count]) => ({ rank, count, golfer: golferByRank(rank) }))
+    .map(([rank, count]) => ({ rank, count, golfer: golferByRank(rank, pool) }))
     .filter(r => r.golfer)
     .sort((a, b) => b.count - a.count || a.rank - b.rank);
 
@@ -964,7 +964,7 @@ function renderEntriesList() {
   document.getElementById('tab-entries-count').textContent = entries.length;
   if (entries.length === 0) { wrap.innerHTML = `<div class="empty"><div class="empty-mark">—</div><div class="empty-text">No entries yet</div></div>`; return; }
   wrap.innerHTML = entries.map(e => {
-    const picksStr = e.picks.map(r => { const g = golferByRank(r); return g ? `${r}. ${g.name}` : `#${r} (unknown)`; }).join(' · ');
+    const picksStr = e.picks.map(r => { const g = golferByRank(r, pool); return g ? `${r}. ${g.name}` : `#${r} (unknown)`; }).join(' · ');
     const canEdit = isCommissioner || e.name.toLowerCase() === getLastName().toLowerCase();
     return `
       <div class="entry-row">
@@ -1040,9 +1040,9 @@ function renderScorecard() {
   </div>`;
 
   const rows = golfersToShow.map(g => {
-    const rounds = effectiveRounds(g);
-    const status = effectiveStatus(g);
-    const total = roundsComplete(g) ? rawTotal(g, pool.par) : null;
+    const rounds = effectiveRounds(g, pool);
+    const status = effectiveStatus(g, pool);
+    const total = roundsComplete(g, pool) ? rawTotal(g, pool.par, pool) : null;
     const totalDisplay = total !== null ? fmtToPar(total, pool.par * 4) : '';
     const matchWarn = g.unmatched ? `<span class="g-match-warn" title="Couldn't auto-match this golfer to ESPN data. Scores may need manual entry.">!</span>` : '';
     return `
@@ -1076,7 +1076,7 @@ function renderScorecard() {
         const key = String(rank);
         const over = pool.score_overrides || {};
         if (!over[key]) over[key] = {};
-        if (!over[key].rounds) over[key].rounds = [...effectiveRounds(golferByRank(rank))];
+        if (!over[key].rounds) over[key].rounds = [...effectiveRounds(golferByRank(rank, pool), pool)];
         over[key].rounds[roundIdx] = val;
         await saveOverrides(over);
       });
@@ -1578,11 +1578,11 @@ document.getElementById('mark-all-complete').addEventListener('click', async () 
   let changed = 0;
   pool.golfers.forEach(g => {
     if (!pickedRanks.has(g.rank)) return;
-    const rounds = effectiveRounds(g);
+    const rounds = effectiveRounds(g, pool);
     const [r1, r2, r3, r4] = rounds;
     const has12 = r1 != null && r1 !== '' && r2 != null && r2 !== '';
     const missing34 = (r3 == null || r3 === '') || (r4 == null || r4 === '');
-    if (has12 && missing34 && effectiveStatus(g) === 'active') {
+    if (has12 && missing34 && effectiveStatus(g, pool) === 'active') {
       const key = String(g.rank);
       if (!over[key]) over[key] = {};
       over[key].status = 'mc';
@@ -1604,9 +1604,9 @@ document.getElementById('mark-no-plays-wd').addEventListener('click', async () =
   const names = [];
   pool.golfers.forEach(g => {
     if (!pickedRanks.has(g.rank)) return;
-    const rounds = effectiveRounds(g);
+    const rounds = effectiveRounds(g, pool);
     const playedAny = rounds.some(r => r !== null && r !== '' && r !== undefined);
-    if (!playedAny && effectiveStatus(g) === 'active') {
+    if (!playedAny && effectiveStatus(g, pool) === 'active') {
       const key = String(g.rank);
       if (!over[key]) over[key] = {};
       over[key].status = 'wd';
