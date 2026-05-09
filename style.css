@@ -339,9 +339,9 @@
 }
 @keyframes mascot-drink-anim {
   0%, 100%  { transform: none; }
-  7%        { transform: rotate(20deg); }
-  13%       { transform: rotate(36deg); }
-  18%       { transform: rotate(36deg); }
+  7%        { transform: translateX(18px) rotate(20deg); }
+  13%       { transform: translateX(52px) rotate(42deg); }
+  18%       { transform: translateX(58px) rotate(45deg); }
   26%       { transform: none; }
 }
 
