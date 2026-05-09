@@ -38,10 +38,17 @@ Work completed post-audit (AUDIT.md, May 2026).
 
 ---
 
-## Remaining items from audit
+## Remaining items from audit — all done
 
-These were noted in the audit but not yet addressed:
+| Item | Commit |
+|------|--------|
+| Retire `onclick` strings in `renderEntriesList` (DOM + addEventListener) | 1e3064d |
+| Extract `roundsToStrokes` helper (eliminate `par + b` duplication) | 69ed0a6 |
+| Add worked example to per-round-equivalent sort comment in `entryBest4` | 8624a90 |
 
-- **`onclick` strings in rendered HTML** (§4) — `renderEntriesList` builds HTML with `onclick="editEntry('${e.id}')"`. Safe with UUIDs but worth retiring when render functions are next touched.
-- **`toRelative` / `relativeToStrokes` duplication** (§4) — `rawTotal` and `entryBest4` both inline `par + b`. Could extract a helper if par ever changes meaning.
-- **Per-round-equivalent sort comment** (§5) — the why in `entryBest4` is half-explained; a worked example would help future readers auditing the fairness rule.
+---
+
+## Open / upcoming
+
+- **Season-long scoring** — multi-week / multi-major cumulative leaderboard. Entries persist across events; scores accumulate over the season. Schema and UI TBD.
+- **Golfball mascot** — a golfball character who drinks and smokes. Vibes TBD.
