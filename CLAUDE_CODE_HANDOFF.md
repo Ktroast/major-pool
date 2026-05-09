@@ -62,7 +62,7 @@ There's a `?raw=1` query param on the proxy that dumps the first competitor's fu
 
 - **There's no build step.** Don't add Webpack, Vite, etc. unless the owner explicitly asks. The single-file HTML is intentional for simplicity and Netlify deploy ease.
 - **Score values can be either raw strokes OR to-par.** The client's `toRelative()` helper uses a heuristic: values ≥ 40 are raw strokes (subtract par), < 40 are already relative. Plus tagged `{relative: N}` objects from the proxy bypass that conversion. Don't break this.
-- **The proxy has a 5-minute in-memory cache** to avoid hammering ESPN. Cache keys include the event ID and date. If you change the response shape, bump the cache to avoid serving stale shapes mid-deploy.
+- **The proxy has a 2-minute in-memory cache** to avoid hammering ESPN (the client polls every 5 minutes — these are intentionally different). Cache keys include the event ID and date. If you change the response shape, bump the cache to avoid serving stale shapes mid-deploy.
 - **Pool data syncs are merge-based**, not replace-based. A fresh sync that's missing a round should NOT erase a previously-known round value. The merge logic preserves the previous value when fresh is null. This protects against in-progress filtering wiping completed-round data.
 - **Name matching uses a Levenshtein + last-name + team-format-aware scorer** in `findBestMatch()`. Common edge cases handled: "Sam Stevens" → "Samuel Stevens", "Cam Davis" → "Cameron Davis", "Dumont De Chassart/Chatfield" → "Adrien Dumont de Chassart & Davis Chatfield", typos in user-uploaded field lists, hyphenated last names (Neergaard-Petersen). Don't break this.
 
