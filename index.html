@@ -496,8 +496,12 @@ function entryBest4(entry, par, pool) {
     return { total: null, dropped: null, details: scoredPicks, roundsScored: 0 };
   }
 
-  // Sort actives by per-round-equivalent (handles in-progress mid-tournament
-  // where some picks have more rounds than others — fairer than raw totals).
+  // Sort actives by per-round-equivalent (score / roundsScored), not raw totals.
+  // Mid-tournament, picks have played different numbers of rounds, so raw totals
+  // are biased toward picks that have played fewer rounds. Example: Pick A is
+  // -3/round over 4 rounds (total 276 strokes on par-72); Pick B is -1/round
+  // over 2 rounds (total 142 strokes). Raw totals rank B first (142 < 276) and
+  // would drop A — wrong. Per-round avg: A=69.0, B=71.0, so A sorts first.
   const sortedActive = [...activeScored].sort((a, b) => {
     const pa = a.score / Math.max(a.roundsScored, 1);
     const pb = b.score / Math.max(b.roundsScored, 1);
