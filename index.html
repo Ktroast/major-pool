@@ -720,14 +720,24 @@ async function fetchEspnLeaderboard(key) {
 // ROUTING
 // ===================================================================
 function getPinFromUrl() {
+  // Path-based routing: /pool/{pin}
+  const pathMatch = window.location.pathname.match(/^\/pool\/([^/]+)/i);
+  if (pathMatch) {
+    const pin = pathMatch[1].toUpperCase().trim();
+    if (pin) return pin;
+  }
+  // Backward compat: old ?pin= query string links
   const params = new URLSearchParams(window.location.search);
-  return (params.get('pin') || '').toUpperCase().trim() || null;
+  const qPin = (params.get('pin') || '').toUpperCase().trim();
+  if (qPin) return qPin;
+  // iOS home screen strips the path on launch — fall back to last known PIN
+  return localStorage.getItem('lastPin') || null;
 }
 function setPinInUrl(pin) {
-  const url = new URL(window.location);
-  if (pin) url.searchParams.set('pin', pin);
-  else url.searchParams.delete('pin');
-  window.history.replaceState({}, '', url);
+  const path = pin ? `/pool/${pin}` : '/';
+  window.history.replaceState({}, '', path);
+  if (pin) localStorage.setItem('lastPin', pin);
+  else localStorage.removeItem('lastPin');
 }
 
 // ===================================================================
@@ -751,9 +761,7 @@ function renderMasthead() {
 function renderPinBanner() {
   const el = document.getElementById('pin-banner');
   if (!pool || !isCommissioner) { el.innerHTML = ''; return; }
-  const url = new URL(window.location);
-  url.searchParams.set('pin', pool.pin);
-  const shareUrl = url.toString();
+  const shareUrl = `${window.location.origin}/pool/${pool.pin}`;
   el.innerHTML = `
     <div class="pin-display">
       <div class="pin-kicker">Pool PIN — share with friends</div>
@@ -1768,6 +1776,11 @@ document.getElementById('delete-pool-btn').addEventListener('click', async () =>
 // BOOT
 // ===================================================================
 async function boot() {
+  // Redirect old ?pin= links to path-based URLs so they still work
+  const legacyPin = (new URLSearchParams(window.location.search).get('pin') || '').toUpperCase().trim();
+  if (legacyPin) {
+    window.history.replaceState({}, '', `/pool/${legacyPin}`);
+  }
   const urlPin = getPinFromUrl();
   if (urlPin) {
     document.getElementById('masthead-sub').innerHTML = '<span>Loading pool...</span>';

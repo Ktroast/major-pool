@@ -16,7 +16,7 @@ Each entrant picks 5 golfers — one per OWGR rank tier (1–10, 11–20, 21–3
 - Tiebreaker: predicted winning to-par score submitted before the tournament; closest wins
 - The commissioner can manually override any golfer's score or status from the **Scores tab**
 
-Pools are accessed by a 6-character PIN in the URL: `https://putalittledrawonit.netlify.app?pin=ABC123`
+Pools are accessed by a 6-character PIN in the URL: `https://putalittledrawonit.netlify.app/pool/ABC123`
 
 ---
 
