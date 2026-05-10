@@ -6,6 +6,6 @@
   node_bundler = "esbuild"
 
 [[redirects]]
-  from = "/pool/*"
+  from = "/pin/*"
   to = "/index.html"
   status = 200
