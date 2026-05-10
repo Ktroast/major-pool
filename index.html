@@ -721,7 +721,7 @@ async function fetchEspnLeaderboard(key) {
 // ===================================================================
 function getPinFromUrl() {
   // Path-based routing: /pin/{pin}
-  const pathMatch = window.location.pathname.match(/^\/pool\/([^/]+)/i);
+  const pathMatch = window.location.pathname.match(/^\/pin\/([^/]+)/i);
   if (pathMatch) {
     const pin = pathMatch[1].toUpperCase().trim();
     if (pin) return pin;
