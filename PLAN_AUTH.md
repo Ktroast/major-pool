@@ -173,11 +173,7 @@ Goal: users can upgrade their anonymous account to a real one with an email, unl
 **Client changes**
 
 - [ ] Add a "Sign in" link to the hub header (visible only to anonymous users)
-<<<<<<< HEAD
-- [ ] Sign-in modal: email input → calls `supabase.auth.linkIdentity({ provider: 'email' })` on anonymous users or `signInWithOtp` on returning visitors
-=======
 - [ ] Sign-in modal: email input → calls `supabase.auth.updateUser({ email })` on anonymous users (NOT `linkIdentity` — that's OAuth-only) or `signInWithOtp` on returning visitors. The `updateUser` path sends a confirmation email; clicking the link preserves `user.id` and flips `is_anonymous` to false.
->>>>>>> f793a72 (Record auth spike findings in PLAN_AUTH.md; mark pre-flight complete)
 - [ ] Magic link redirects back to `/` and shows a "signed in as foo@bar.com" indicator
 - [ ] Empty-hub CTA: "Played before? Sign in to find your pools across devices." — only shown when hub is empty AND user is anonymous
 - [ ] Cross-device flow: visiting `/` on a new device with no anonymous session → landing page → "Sign in" → magic link → hub populated from `user_pools` for the now-claimed user
