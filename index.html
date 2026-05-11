@@ -352,6 +352,12 @@ let editingEntryId = null;
 let pollTimer = null;
 let expandedEntryIds = new Set();  // tracks which leaderboard rows are expanded, preserved across re-renders
 
+// Auth state — every visitor gets an anonymous Supabase user on first load.
+// currentUser is set before any pool logic runs (see boot()); onAuthStateChange
+// keeps it current for token refreshes and future sign-in/sign-out events.
+let currentUser = null;
+function getCurrentUserId() { return currentUser?.id || null; }
+
 // ===================================================================
 // LOCAL STORAGE (commissioner keys per pool)
 // ===================================================================
@@ -1776,6 +1782,22 @@ document.getElementById('delete-pool-btn').addEventListener('click', async () =>
 // BOOT
 // ===================================================================
 async function boot() {
+  // --- Auth session bootstrap (must complete before any pool loading) ---
+  // Keep currentUser in sync for the lifetime of the session.
+  sb.auth.onAuthStateChange((_event, session) => {
+    currentUser = session?.user ?? null;
+  });
+  // Use existing session if present; otherwise create an anonymous one.
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+  } else {
+    const { data, error } = await sb.auth.signInAnonymously();
+    if (error) console.error('anon sign-in failed:', error);
+    else currentUser = data.user;
+  }
+
+  // --- Routing (unchanged from pre-auth) ---
   // Redirect old ?pin= links to path-based URLs so they still work
   const legacyPin = (new URLSearchParams(window.location.search).get('pin') || '').toUpperCase().trim();
   if (legacyPin) {
