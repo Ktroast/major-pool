@@ -32,6 +32,8 @@ No `npm install` needed — uses Node's built-in `node:test`. Scoring/matching t
 
 **Cache TTL is 2 minutes** (proxy), not 5. The client polls every 5 minutes. These are intentionally different.
 
+**Every session has an anonymous Supabase user.** `boot()` calls `sb.auth.getSession()` first; if no session exists it calls `sb.auth.signInAnonymously()`. The user is stored in `currentUser` (module-scoped) and exposed via `getCurrentUserId()`. `onAuthStateChange()` keeps it current. `user_pools` tracks pool membership — `loadPool()` and `createPool()` both upsert a row there after success. Failures in `recordPoolVisit()` are console.error'd and never surfaced to the user. Phase 1b adds the hub UI; phase 4 migrates commissioner identity off localStorage.
+
 **URL routing is path-based: `/pin/{pin}`.** Shareable links look like `https://putalittledrawonit.netlify.app/pin/ABC123`. The old `?pin=ABC123` query-string format is deprecated — boot() detects it and redirects to the path form so old links still work. Netlify serves `/pin/*` via a 200 rewrite to `index.html`. A `lastPin` key in localStorage provides a fallback for iOS home screen launches (Safari can strip the path on PWA launch from the home screen). Users with the old `?pin=` home screen icon should re-add it once with the new `/pin/{pin}` URL to get reliable path-based launch.
 
 ## Migration notes (2026-05-10)
@@ -50,6 +52,5 @@ Friends with old `?pin=` bookmarks are auto-redirected client-side. Home screen 
 
 ## What's still open (from PROGRESS.md)
 
-- `onclick` strings in rendered HTML (`renderEntriesList`) — safe but worth retiring
-- `par + b` duplicated in `rawTotal` and `entryBest4` — could extract `relativeToStrokes`
-- Per-round-equivalent sort in `entryBest4` needs a worked example in its comment
+- Auth migration phase 1b — hub UI, routing to hub, localStorage migration
+- Auth migration phases 2–5 — see PLAN_AUTH.md

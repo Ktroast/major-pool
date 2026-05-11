@@ -48,7 +48,32 @@ Work completed post-audit (AUDIT.md, May 2026).
 
 ---
 
+## Auth migration — phase 1a (anonymous auth foundation)
+
+Merged on branch `phase-1a-anon-auth`. Applies the invisible half of phase 1 — session bootstrap and membership writes with no UI changes.
+
+| Item | Commit |
+|------|--------|
+| Add `user_pools` table + RLS policy to `supabase/schema.sql` | c53d73f |
+| Bootstrap anonymous Supabase session in `boot()` | 6d4d8ff |
+| Add `recordPoolVisit()`; wire into `loadPool` and `createPool` | b3da8e3 |
+
+Manual steps required before smoke testing:
+- Apply `user_pools` CREATE TABLE and RLS policy SQL via Supabase dashboard (see `supabase/schema.sql`).
+
+Acceptance criteria:
+1. Visiting `/` or `/pin/ABC123` — no visible change.
+2. `await sb.auth.getSession()` in devtools returns an anonymous session.
+3. Loading a pool creates/updates a `user_pools` row; reload bumps `last_visited`, `joined_at` unchanged.
+4. Creating a pool creates a `user_pools` row with `role='commissioner'`.
+5. Different browser/device → different `user_id` row.
+6. Supabase anonymous-auth toggle confirmed ON (already done per spike notes).
+
+---
+
 ## Open / upcoming
 
+- **Auth phase 1b** — hub UI, routing, localStorage migration (see PLAN_AUTH.md Phase 1)
+- **Auth phases 2–5** — entry linking, magic-link claiming, commissioner migration, leagues (see PLAN_AUTH.md)
 - **Season-long scoring** — multi-week / multi-major cumulative leaderboard. Entries persist across events; scores accumulate over the season. Schema and UI TBD.
 - **Golfball mascot** — a golfball character who drinks and smokes. Vibes TBD.
