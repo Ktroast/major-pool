@@ -32,7 +32,12 @@ No `npm install` needed — uses Node's built-in `node:test`. Scoring/matching t
 
 **Cache TTL is 2 minutes** (proxy), not 5. The client polls every 5 minutes. These are intentionally different.
 
-**Every session has an anonymous Supabase user.** `boot()` calls `sb.auth.getSession()` first; if no session exists it calls `sb.auth.signInAnonymously()`. The user is stored in `currentUser` (module-scoped) and exposed via `getCurrentUserId()`. `onAuthStateChange()` keeps it current. `user_pools` tracks pool membership — `loadPool()` and `createPool()` both upsert a row there after success. Failures in `recordPoolVisit()` are console.error'd and never surfaced to the user. Phase 1b adds the hub UI; phase 4 migrates commissioner identity off localStorage.
+**Anonymous Supabase auth (phase 1a):**
+- Every visitor gets an anonymous Supabase user on boot via `signInAnonymously()` — `currentUser` and `getCurrentUserId()` are the accessors. `onAuthStateChange()` keeps `currentUser` current.
+- `user_pools` tracks (user_id, pool_id, role) with PK on the pair; `recordPoolVisit()` upserts on each pool load and create. Failures are console.error'd, never surfaced.
+- The upsert omits `joined_at` from the payload so on-conflict updates leave it frozen — matters for phase 5 settled-pool math.
+- RLS on `user_pools` enforces `auth.uid() = user_id` for all operations.
+- Phase 1b is next: hub UI + migrate legacy localStorage state.
 
 **URL routing is path-based: `/pin/{pin}`.** Shareable links look like `https://putalittledrawonit.netlify.app/pin/ABC123`. The old `?pin=ABC123` query-string format is deprecated — boot() detects it and redirects to the path form so old links still work. Netlify serves `/pin/*` via a 200 rewrite to `index.html`. A `lastPin` key in localStorage provides a fallback for iOS home screen launches (Safari can strip the path on PWA launch from the home screen). Users with the old `?pin=` home screen icon should re-add it once with the new `/pin/{pin}` URL to get reliable path-based launch.
 

@@ -81,11 +81,13 @@ All three load-bearing scenarios confirmed working against the live Supabase pro
 
 ## Phase 1: Anonymous auth foundation + hub
 
+> Split into **1a** (invisible foundation, complete) and **1b** (visible hub, next). Items marked `[x]` landed in phase 1a.
+
 Goal: every visitor has a Supabase user (anonymous unless claimed); the home screen icon opens to a hub of their pools.
 
 **Schema changes**
 
-- [ ] Create `user_pools` table:
+- [x] Create `user_pools` table:
   ```sql
   CREATE TABLE user_pools (
       user_id      uuid        REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -96,14 +98,14 @@ Goal: every visitor has a Supabase user (anonymous unless claimed); the home scr
       PRIMARY KEY (user_id, pool_id)
   );
   ```
-- [ ] Add RLS policy: a user can read/write their own `user_pools` rows only
-- [ ] Update `supabase/schema.sql` with the new table
+- [x] Add RLS policy: a user can read/write their own `user_pools` rows only
+- [x] Update `supabase/schema.sql` with the new table
 
 **Client changes (`index.html`)**
 
-- [ ] On boot, before any pool loading, call `supabase.auth.signInAnonymously()` if no session exists
-- [ ] Store `currentUser` in app state; expose via a small helper (`getCurrentUserId()`)
-- [ ] When a pool is successfully loaded via `loadPool(pin)`, upsert a `user_pools` row with `last_visited = now()`
+- [x] On boot, before any pool loading, call `supabase.auth.signInAnonymously()` if no session exists
+- [x] Store `currentUser` in app state; expose via a small helper (`getCurrentUserId()`)
+- [x] When a pool is successfully loaded via `loadPool(pin)`, upsert a `user_pools` row with `last_visited = now()`
 - [ ] Build `renderHub()` — reads `user_pools` joined to `pools`, displays as a list sorted by `last_visited DESC`. Each row shows pool name, PIN, entry count, your entry's current standing (if you have one), and last-visited timestamp.
 - [ ] New view: `view-hub` panel between landing and pool views
 - [ ] Hub empty state: show the existing landing controls (start new pool, enter PIN) — empty hub === current landing UX
