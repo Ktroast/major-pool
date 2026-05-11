@@ -652,6 +652,7 @@ async function createPool(config) {
   }).select().single();
   if (error) throw error;
   setCommishKey(data.id, commish_key);
+  recordPoolVisit(data, 'commissioner');
   return data;
 }
 async function fetchPool(pin) {
@@ -687,6 +688,22 @@ async function upsertEntry(poolId, entry) {
 }
 async function deleteEntryDB(id) { const { error } = await sb.from('entries').delete().eq('id', id); if (error) throw error; }
 async function deletePoolDB(id) { const { error } = await sb.from('pools').delete().eq('id', id); if (error) throw error; }
+
+// Write (or refresh) a user_pools membership row. Failures are logged but
+// never surfaced to the user — this is invisible plumbing.
+async function recordPoolVisit(p, role) {
+  const userId = getCurrentUserId();
+  if (!userId) return;
+  const now = new Date().toISOString();
+  const { error } = await sb.from('user_pools').upsert(
+    { user_id: userId, pool_id: p.id, role, last_visited: now },
+    { onConflict: 'user_id,pool_id', ignoreDuplicates: false }
+    // joined_at is not included here — the DEFAULT now() on the column handles
+    // first insert; subsequent upserts only update columns we specify, so
+    // joined_at stays frozen at its original value.
+  );
+  if (error) console.error('user_pools upsert failed:', error);
+}
 
 // ===================================================================
 // ESPN API
@@ -1304,6 +1321,7 @@ async function loadPool(pin) {
     entries = await fetchEntries(p.id);
     const storedKey = getCommishKey(p.id);
     isCommissioner = storedKey && storedKey === p.commissioner_key;
+    recordPoolVisit(p, isCommissioner ? 'commissioner' : 'player');
     setPinInUrl(p.pin);
     showView('pool');
     showTab(isCommissioner && !p.golfers?.length ? 'setup' : 'leaderboard');
