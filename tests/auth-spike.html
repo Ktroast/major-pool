@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auth Spike — Major Pool</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: monospace; max-width: 780px; margin: 2rem auto; padding: 0 1rem; background: #111; color: #ddd; }
+    h1 { color: #f0c040; margin-bottom: 0.25rem; }
+    .subtitle { color: #666; font-size: 0.85rem; margin-bottom: 1.5rem; }
+    h2 { color: #7ab8f5; border-top: 1px solid #333; padding-top: 0.75rem; margin-top: 1.5rem; }
+    .card { background: #1e1e1e; border: 1px solid #444; padding: 1rem; border-radius: 4px; margin: 0.75rem 0; }
+    .field { margin: 0.3rem 0; }
+    .label { color: #888; }
+    .val { color: #7fff7f; }
+    .val.null-val { color: #666; font-style: italic; }
+    .val.anon { color: #f0a040; }
+    details summary { cursor: pointer; color: #7ab8f5; margin-top: 0.5rem; font-size: 0.85rem; }
+    details pre { background: #0a0a0a; padding: 0.75rem; border-radius: 3px; overflow-x: auto; font-size: 0.78rem; color: #aaa; max-height: 300px; overflow-y: auto; }
+    button { background: #2a2a4a; color: #ddd; border: 1px solid #556; padding: 0.4rem 0.9rem; cursor: pointer; border-radius: 3px; font-family: monospace; font-size: 0.9rem; }
+    button:hover { background: #3a3a6a; }
+    button.danger { background: #3a1a1a; border-color: #844; }
+    button.danger:hover { background: #5a2a2a; }
+    input[type="email"] { background: #1a1a1a; color: #ddd; border: 1px solid #555; padding: 0.4rem 0.6rem; border-radius: 3px; font-family: monospace; font-size: 0.9rem; width: 260px; }
+    .row { display: flex; gap: 0.5rem; align-items: center; margin: 0.5rem 0; flex-wrap: wrap; }
+    .resp { background: #0a0a0a; border: 1px solid #333; padding: 0.6rem; border-radius: 3px; margin-top: 0.5rem; font-size: 0.82rem; white-space: pre-wrap; word-break: break-all; max-height: 180px; overflow-y: auto; display: none; }
+    .resp.ok { border-color: #2d6a2d; color: #7fff7f; }
+    .resp.err { border-color: #6a2020; color: #ff7070; }
+    .resp.info { border-color: #2a4a6a; color: #7ab8f5; }
+    .note { font-size: 0.82rem; color: #888; margin: 0.4rem 0; }
+    .warn { color: #f0a040; }
+    #error-banner { display: none; background: #3a1010; border: 2px solid #c03030; padding: 1rem; border-radius: 4px; color: #ff8080; margin: 0.75rem 0; }
+    #log-panel { background: #0a0a0a; border: 1px solid #333; padding: 0.75rem; border-radius: 3px; height: 180px; overflow-y: auto; font-size: 0.8rem; }
+    .log-line { margin: 0.15rem 0; }
+    .log-ts { color: #555; }
+    .log-event { color: #f0c040; }
+    .log-detail { color: #999; }
+  </style>
+</head>
+<body>
+
+<h1>Auth Spike</h1>
+<p class="subtitle">Throwaway page for manually verifying the four pre-flight spike scenarios in PLAN_AUTH.md. Not part of the app.</p>
+
+<div id="error-banner"></div>
+
+<!-- ── SCENARIO 1: Current user state ── -->
+<h2>Current user state (scenario 1 + 2)</h2>
+<div class="card" id="user-card">Loading…</div>
+<div class="row">
+  <button onclick="refreshState()">Refresh user state</button>
+</div>
+
+<!-- ── SCENARIO 3: Claim account ── -->
+<h2>Claim this account — add email to anonymous user (scenario 3)</h2>
+<p class="note">
+  Calls <code>supabase.auth.updateUser({ email })</code>. Supabase sends a confirmation email;
+  clicking that link upgrades the anonymous user in place (same <code>user.id</code>, <code>is_anonymous</code> → false).
+</p>
+<p class="note warn">
+  ⚠ Note for PLAN_AUTH.md: <code>linkIdentity({ provider: 'email' })</code> is OAuth-only in v2.
+  The correct API for adding email to an anonymous user is <code>updateUser({ email })</code>.
+</p>
+<div class="row">
+  <input type="email" id="claim-email" placeholder="you@example.com">
+  <button onclick="claimAccount()">Claim this account</button>
+</div>
+<div class="resp info" id="claim-resp"></div>
+
+<!-- ── SCENARIO 4: Cross-device magic link ── -->
+<h2>Sign in with magic link — cross-device scenario (scenario 4)</h2>
+<p class="note">
+  Calls <code>supabase.auth.signInWithOtp({ email })</code>.
+  Use this on a second device (or after clearing storage) with the same email used to claim above.
+  Watch the log to see whether Supabase merges identities or produces a new user.
+</p>
+<div class="row">
+  <input type="email" id="otp-email" placeholder="you@example.com">
+  <button onclick="sendMagicLink()">Send magic link</button>
+</div>
+<div class="resp info" id="otp-resp"></div>
+
+<!-- ── Sign out ── -->
+<h2>Sign out</h2>
+<div class="row">
+  <button onclick="doSignOut()">Sign out</button>
+</div>
+<div class="resp info" id="signout-resp"></div>
+
+<!-- ── Reset ── -->
+<h2>Reset between scenarios</h2>
+<div class="row">
+  <button class="danger" onclick="clearAll()">Clear all localStorage + reload</button>
+</div>
+
+<!-- ── Auth event log ── -->
+<h2>Auth event log</h2>
+<div id="log-panel"><span class="log-detail">Waiting for events…</span></div>
+
+<script>
+  const SUPABASE_URL = 'https://tuglwvmwmacaqggpipri.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1Z2x3dm13bWFjYXFnZ3BpcHJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MTY1MDIsImV4cCI6MjA5MjE5MjUwMn0.qzK4t1Ohx3AEFU-KFreGREJ39pCDYXO6HJjxOCdAOrg';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  function addLog(event, detail) {
+    const panel = document.getElementById('log-panel');
+    const placeholder = panel.querySelector('span');
+    if (placeholder) panel.innerHTML = '';
+    const ts = new Date().toLocaleTimeString();
+    const line = document.createElement('div');
+    line.className = 'log-line';
+    line.innerHTML = `<span class="log-ts">[${ts}]</span> <span class="log-event">${event}</span>`
+      + (detail ? ` <span class="log-detail">— ${detail}</span>` : '');
+    panel.appendChild(line);
+    panel.scrollTop = panel.scrollHeight;
+  }
+
+  function showResp(id, data, status) {
+    const el = document.getElementById(id);
+    el.style.display = 'block';
+    el.className = 'resp ' + status;
+    el.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+  }
+
+  function renderUser(user, session) {
+    const card = document.getElementById('user-card');
+    if (!user) {
+      card.innerHTML = '<span style="color:#666">No session — signed out or cleared.</span>';
+      return;
+    }
+    const anonClass = user.is_anonymous ? 'anon' : '';
+    const anonText  = user.is_anonymous ? 'true (anonymous)' : 'false (claimed / permanent)';
+    card.innerHTML = `
+      <div class="field"><span class="label">user.id:&nbsp;</span><span class="val">${user.id}</span></div>
+      <div class="field"><span class="label">is_anonymous:&nbsp;</span><span class="val ${anonClass}">${anonText}</span></div>
+      <div class="field"><span class="label">email:&nbsp;</span><span class="val ${user.email ? '' : 'null-val'}">${user.email || '(none)'}</span></div>
+      <div class="field"><span class="label">email_confirmed_at:&nbsp;</span><span class="val ${user.email_confirmed_at ? '' : 'null-val'}">${user.email_confirmed_at || '(none)'}</span></div>
+      <div class="field"><span class="label">identities:&nbsp;</span><span class="val">${(user.identities || []).map(i => i.provider).join(', ') || '(none)'}</span></div>
+      <details><summary>Raw session JSON</summary><pre>${JSON.stringify(session, null, 2)}</pre></details>
+      <details><summary>Raw user JSON</summary><pre>${JSON.stringify(user, null, 2)}</pre></details>
+    `;
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('error-banner');
+    el.style.display = 'block';
+    el.innerHTML = msg;
+  }
+
+  // ── Actions ────────────────────────────────────────────────────────────────
+
+  async function refreshState() {
+    const { data: { session }, error } = await sb.auth.getSession();
+    if (error) { addLog('getSession ERROR', error.message); return; }
+    renderUser(session?.user ?? null, session);
+    addLog('manual-refresh', session?.user?.id ?? 'no session');
+  }
+
+  async function claimAccount() {
+    const email = document.getElementById('claim-email').value.trim();
+    if (!email) { alert('Enter an email address.'); return; }
+    const { data, error } = await sb.auth.updateUser({ email });
+    if (error) {
+      showResp('claim-resp', error, 'err');
+      addLog('updateUser ERROR', error.message);
+    } else {
+      showResp('claim-resp',
+        JSON.stringify(data, null, 2) + '\n\n→ Check your email for a confirmation link.\n  After clicking it, press "Refresh user state" — user.id should be unchanged and is_anonymous should be false.',
+        'ok');
+      addLog('updateUser(email)', `confirmation sent to ${email}`);
+    }
+  }
+
+  async function sendMagicLink() {
+    const email = document.getElementById('otp-email').value.trim();
+    if (!email) { alert('Enter an email address.'); return; }
+    const { data, error } = await sb.auth.signInWithOtp({ email });
+    if (error) {
+      showResp('otp-resp', error, 'err');
+      addLog('signInWithOtp ERROR', error.message);
+    } else {
+      showResp('otp-resp',
+        JSON.stringify(data, null, 2) + '\n\n→ Check your email for the magic link.\n  After clicking it (on this device or another), watch the log for the resulting SIGNED_IN event.\n  Key question: is the resulting user.id the same as or different from the current anonymous user?',
+        'ok');
+      addLog('signInWithOtp', `magic link sent to ${email}`);
+    }
+  }
+
+  async function doSignOut() {
+    const { error } = await sb.auth.signOut();
+    if (error) {
+      showResp('signout-resp', error, 'err');
+      addLog('signOut ERROR', error.message);
+    } else {
+      showResp('signout-resp', '{ "status": "signed out" }', 'ok');
+      addLog('signOut', 'ok');
+      await refreshState();
+    }
+  }
+
+  function clearAll() {
+    localStorage.clear();
+    addLog('localStorage cleared', 'reloading…');
+    setTimeout(() => location.reload(), 200);
+  }
+
+  // ── Auth state listener ────────────────────────────────────────────────────
+
+  sb.auth.onAuthStateChange((event, session) => {
+    const uid = session?.user?.id ?? 'no user';
+    const anon = session?.user ? ` | is_anonymous=${session.user.is_anonymous}` : '';
+    addLog(event, uid + anon);
+    renderUser(session?.user ?? null, session);
+  });
+
+  // ── Boot ───────────────────────────────────────────────────────────────────
+
+  (async () => {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      addLog('existing-session', session.user.id);
+      renderUser(session.user, session);
+      return;
+    }
+
+    addLog('no-session', 'calling signInAnonymously()…');
+    const { data, error } = await sb.auth.signInAnonymously();
+
+    if (error) {
+      const isDisabled = error.status === 422
+        || /anonymous/i.test(error.message)
+        || /provider.*disabled/i.test(error.message);
+      if (isDisabled) {
+        showError(`
+          <strong>signInAnonymously() failed — anonymous sign-ins are probably disabled.</strong><br><br>
+          Enable it in the Supabase dashboard:<br>
+          <strong>Authentication → Sign In Methods → Anonymous Sign-ins → toggle on</strong><br><br>
+          Raw error: <code>${JSON.stringify(error)}</code>
+        `);
+      } else {
+        showError(`<strong>signInAnonymously() error:</strong> ${error.message}<br><code>${JSON.stringify(error)}</code>`);
+      }
+      addLog('signInAnonymously ERROR', error.message);
+      renderUser(null, null);
+    }
+    // onAuthStateChange fires on success — no need to renderUser here
+  })();
+</script>
+</body>
+</html>

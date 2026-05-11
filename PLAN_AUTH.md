@@ -43,7 +43,7 @@ Verify Supabase's anonymous-auth and identity-linking behavior end-to-end before
 
 - [ ] Confirm `supabase.auth.signInAnonymously()` works on the current Supabase project (may need to enable in dashboard)
 - [ ] Verify anonymous session persists in localStorage across page reloads
-- [ ] Test `supabase.auth.linkIdentity({ provider: 'email' })` on an anonymous user — confirm the magic-link flow upgrades the user in place (same `user.id`) rather than creating a new user
+- [ ] Test `supabase.auth.updateUser({ email })` on an anonymous user — Supabase JS v2 uses this method (not `linkIdentity`, which is OAuth-only) to add an email to an anonymous user and trigger the confirmation flow; confirm the link upgrades the user in place (same `user.id`) rather than creating a new user
 - [ ] Test the edge case: anonymous user on device A, claims via email, then visits on device B (already has its own anonymous session) and signs in with the same email — confirm Supabase merges or at least lets us detect and reconcile
 - [ ] Document findings in this file under "Spike notes" before phase 1 starts
 
@@ -146,7 +146,7 @@ Goal: users can upgrade their anonymous account to a real one with an email, unl
 **Client changes**
 
 - [ ] Add a "Sign in" link to the hub header (visible only to anonymous users)
-- [ ] Sign-in modal: email input → calls `supabase.auth.linkIdentity({ provider: 'email' })` on anonymous users or `signInWithOtp` on returning visitors
+- [ ] Sign-in modal: email input → calls `supabase.auth.updateUser({ email })` on anonymous users (sends confirmation email; on click, `is_anonymous` flips to false and `user.id` is preserved) or `signInWithOtp` on returning visitors
 - [ ] Magic link redirects back to `/` and shows a "signed in as foo@bar.com" indicator
 - [ ] Empty-hub CTA: "Played before? Sign in to find your pools across devices." — only shown when hub is empty AND user is anonymous
 - [ ] Cross-device flow: visiting `/` on a new device with no anonymous session → landing page → "Sign in" → magic link → hub populated from `user_pools` for the now-claimed user
