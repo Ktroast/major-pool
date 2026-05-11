@@ -41,14 +41,41 @@ End state:
 
 Verify Supabase's anonymous-auth and identity-linking behavior end-to-end before committing to the migration. A surprise here would invalidate the whole plan.
 
-- [ ] Confirm `supabase.auth.signInAnonymously()` works on the current Supabase project (may need to enable in dashboard)
-- [ ] Verify anonymous session persists in localStorage across page reloads
-- [ ] Test `supabase.auth.updateUser({ email })` on an anonymous user — Supabase JS v2 uses this method (not `linkIdentity`, which is OAuth-only) to add an email to an anonymous user and trigger the confirmation flow; confirm the link upgrades the user in place (same `user.id`) rather than creating a new user
-- [ ] Test the edge case: anonymous user on device A, claims via email, then visits on device B (already has its own anonymous session) and signs in with the same email — confirm Supabase merges or at least lets us detect and reconcile
-- [ ] Document findings in this file under "Spike notes" before phase 1 starts
+- [x] Confirm `supabase.auth.signInAnonymously()` works on the current Supabase project (may need to enable in dashboard)
+- [x] Verify anonymous session persists in localStorage across page reloads
+- [x] Test `supabase.auth.updateUser({ email })` on an anonymous user — confirm the confirmation flow upgrades the user in place (same `user.id`) rather than creating a new user. NOTE: `linkIdentity` is OAuth-only in Supabase JS v2; `updateUser({ email })` is the correct API for adding email to an anonymous user.
+- [x] Test the edge case: anonymous user on device A, claims via email, then visits on device B (already has its own anonymous session) and signs in with the same email — confirm Supabase merges or at least lets us detect and reconcile
+- [x] Document findings in this file under "Spike notes" before phase 1 starts
 
 ### Spike notes
-_(fill in after running the spike)_
+
+**Spike run: May 11, 2026. Verdict: GO — migration plan stands.**
+
+All three load-bearing scenarios confirmed working against the live Supabase project:
+
+- **Scenario 1 (session persistence):** `supabase.auth.signInAnonymously()` creates a session that survives page reload. Same `user.id` after multiple reloads and tab close/reopen.
+
+- **Scenario 2 (claim preserves user.id):** Anonymous → claimed upgrade via `supabase.auth.updateUser({ email })` preserves `user.id` through the full confirmation flow. Before claim: `is_anonymous: true`, `email: (none)`, `identities: []`. After clicking the confirmation email link: same `user.id`, `is_anonymous: false`, email populated, `email_confirmed_at` set, `identities: [email]`. This is the critical finding — the migration plan's assumption that user IDs are stable across claim is verified, so no user-record merging is needed when `user_pools` and `entries.user_id` reference the original anonymous ID.
+
+- **Scenario 3 (cross-device sign-in):** `signInWithOtp({ email })` on a second device, using the same email used to claim on device 1, signs the user in to the same `user.id`. Cross-device pool history recovery works as designed.
+
+**API correction:** PLAN_AUTH.md originally referenced `linkIdentity({ provider: 'email' })` for the claim step. That method is OAuth-only in Supabase JS v2 (Google, GitHub, etc.). The correct API for adding email to an anonymous user is `supabase.auth.updateUser({ email })`, which triggers Supabase's email confirmation flow. Phase 3 plan updated accordingly.
+
+**Email delivery notes:**
+- Supabase's confirmation emails sometimes land in junk/spam — flag this in the sign-in UI copy in phase 3.
+- The confirmation email uses "Confirm Email Change" / "Change Email" copy, which is misleading for first-time claimers ("I'm not changing anything!") but functionally correct. Worth customizing the email template in the Supabase dashboard before phase 3 ships.
+- iCloud/HEY mail wraps links through `www-mail.icloud-sandbox.com` which can interfere with the redirect chain. The link still works if you copy-paste the URL directly. Not a blocker, just a UX wrinkle some users will hit.
+
+**Supabase dashboard config that's now locked in:**
+- Authentication → Sign In / Providers → "Allow anonymous sign-ins" = ON
+- Authentication → URL Configuration → Site URL = `https://putalittledrawonit.netlify.app`
+- Authentication → URL Configuration → Redirect URLs include `https://spike-auth--putalittledrawonit.netlify.app/**` (spike, can remove after migration) and `http://localhost:8080/**` (local dev)
+- "Allow manual linking" = OFF (not needed for `updateUser` flow; only required for OAuth identity linking)
+- "Confirm email" = ON (kept on for production safety; means claim flow requires a confirmation click)
+
+**Scenarios not tested (and why):**
+- Scenario 4 (abandoned anonymous user unrecoverable) — already accepted as policy in PLAN_AUTH.md risk section. No need to verify; it's an inherent property of how Supabase handles anonymous-without-email sessions.
+- Scenario 5 (auth state event observation) — saw `SIGNED_IN` and `existing-session` events fire in the log during scenarios 1–3. Sufficient for phase 1 to wire up `onAuthStateChange()` correctly.
 
 ---
 
@@ -146,7 +173,7 @@ Goal: users can upgrade their anonymous account to a real one with an email, unl
 **Client changes**
 
 - [ ] Add a "Sign in" link to the hub header (visible only to anonymous users)
-- [ ] Sign-in modal: email input → calls `supabase.auth.updateUser({ email })` on anonymous users (sends confirmation email; on click, `is_anonymous` flips to false and `user.id` is preserved) or `signInWithOtp` on returning visitors
+- [ ] Sign-in modal: email input → calls `supabase.auth.updateUser({ email })` on anonymous users (NOT `linkIdentity` — that's OAuth-only) or `signInWithOtp` on returning visitors. The `updateUser` path sends a confirmation email; clicking the link preserves `user.id` and flips `is_anonymous` to false.
 - [ ] Magic link redirects back to `/` and shows a "signed in as foo@bar.com" indicator
 - [ ] Empty-hub CTA: "Played before? Sign in to find your pools across devices." — only shown when hub is empty AND user is anonymous
 - [ ] Cross-device flow: visiting `/` on a new device with no anonymous session → landing page → "Sign in" → magic link → hub populated from `user_pools` for the now-claimed user
