@@ -135,7 +135,8 @@
           <div class="section-kicker">Your Pools</div>
           <div class="section-title">Pools you've joined or created</div>
         </div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+          <div id="hub-auth-ui"></div>
           <button class="btn btn-secondary btn-small" id="hub-add-pool-btn">Add a pool</button>
           <button class="btn btn-small" id="hub-new-pool-btn">Start a new pool</button>
         </div>
@@ -1450,6 +1451,7 @@ function formatHubDate(isoStr) {
 async function showHub() {
   showView('hub');
   renderMasthead();
+  renderHubAuthUI();
   const list = document.getElementById('hub-pool-list');
   list.innerHTML = '<div class="muted" style="padding: 22px;">Loading your pools…</div>';
   const userId = getCurrentUserId();
@@ -1723,6 +1725,11 @@ document.getElementById('join-pin-input').addEventListener('keydown', e => {
 
 document.getElementById('hub-new-pool-btn').addEventListener('click', () => {
   document.getElementById('start-pool-btn').click();
+});
+
+document.addEventListener('click', () => {
+  const menu = document.getElementById('hub-profile-menu');
+  if (menu) menu.classList.add('hidden');
 });
 
 document.getElementById('hub-add-pool-btn').addEventListener('click', () => {
