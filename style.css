@@ -326,6 +326,40 @@
     .lb-picks .short-name { display: none; }
   }
 
+/* ── Hub view ── */
+.hub-row {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; padding: 14px 22px;
+  border-bottom: 1px solid var(--rule);
+  cursor: pointer; transition: background 0.15s;
+}
+.hub-row:last-child { border-bottom: none; }
+.hub-row:hover { background: rgba(45, 74, 43, 0.04); }
+.hub-row-main { flex: 1; min-width: 0; }
+.hub-row-name {
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; line-height: 1.2;
+}
+.hub-row-pin {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  color: var(--ink-soft); margin-top: 3px; letter-spacing: 0.08em;
+}
+.hub-row-role-badge {
+  display: inline-block; margin-left: 8px; padding: 1px 7px;
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  background: rgba(176, 138, 62, 0.15); color: var(--gold);
+  vertical-align: middle;
+}
+.hub-row-meta {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  color: var(--ink-soft); letter-spacing: 0.06em;
+  white-space: nowrap; flex-shrink: 0;
+}
+@media (max-width: 480px) {
+  .hub-row { flex-wrap: wrap; gap: 4px; }
+  .hub-row-meta { flex-basis: 100%; font-size: 10px; }
+}
+
 /* ── Mascot ── */
 .masthead-mascot { display: block; margin: 10px auto 2px; }
 .mascot-empty    { display: block; margin: 0 auto 16px; }
