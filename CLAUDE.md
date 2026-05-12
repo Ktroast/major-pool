@@ -36,6 +36,7 @@ No `npm install` needed — uses Node's built-in `node:test`. Scoring/matching t
 - Every visitor gets an anonymous Supabase user on boot via `signInAnonymously()` — `currentUser` and `getCurrentUserId()` are the accessors. `onAuthStateChange()` keeps `currentUser` current.
 - `user_pools` tracks (user_id, pool_id, role) with PK on the pair; `recordPoolVisit()` upserts on each pool load and create. Failures are console.error'd, never surfaced.
 - The upsert omits `joined_at` from the payload so on-conflict updates leave it frozen — matters for phase 5 settled-pool math.
+- **Role stickiness invariant (phase 1b bug fix):** `recordPoolVisit` only writes `role` to the payload when called with `'commissioner'`. Player-context calls omit `role` entirely — on insert the DB default (`'player'`) applies; on conflict-update the existing role is preserved. This means commissioner status can never be silently demoted by a visit. `loadPool` also reads the `user_pools` row to compute `isCommissioner`, so once a row is marked commissioner in the DB it stays commissioner even after localStorage keys are cleared by migration.
 - RLS on `user_pools` enforces `auth.uid() = user_id` for all operations.
 
 **Hub (phase 1b):**
