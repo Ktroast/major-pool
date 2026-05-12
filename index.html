@@ -712,12 +712,15 @@ async function recordPoolVisit(p, role) {
   const userId = getCurrentUserId();
   if (!userId) return;
   const now = new Date().toISOString();
+  const payload = { user_id: userId, pool_id: p.id, last_visited: now };
+  if (role === 'commissioner') payload.role = 'commissioner';
+  // For 'player' calls: omit role. On insert the DB default ('player') applies;
+  // on conflict-update the existing role is preserved — commissioner rows can't
+  // be silently demoted by a player-context visit. joined_at is also omitted so
+  // it stays frozen at its original insert value (phase 1a invariant).
   const { error } = await sb.from('user_pools').upsert(
-    { user_id: userId, pool_id: p.id, role, last_visited: now },
+    payload,
     { onConflict: 'user_id,pool_id', ignoreDuplicates: false }
-    // joined_at is not included here — the DEFAULT now() on the column handles
-    // first insert; subsequent upserts only update columns we specify, so
-    // joined_at stays frozen at its original value.
   );
   if (error) console.error('user_pools upsert failed:', error);
 }
@@ -1390,7 +1393,13 @@ async function loadPool(pin) {
     pool = p;
     entries = await fetchEntries(p.id);
     const storedKey = getCommishKey(p.id);
-    isCommissioner = storedKey && storedKey === p.commissioner_key;
+    const { data: userPoolRow } = await sb.from('user_pools')
+      .select('role')
+      .eq('user_id', getCurrentUserId())
+      .eq('pool_id', p.id)
+      .maybeSingle();
+    const userPoolRole = userPoolRow?.role || null;
+    isCommissioner = (storedKey && storedKey === p.commissioner_key) || userPoolRole === 'commissioner';
     recordPoolVisit(p, isCommissioner ? 'commissioner' : 'player');
     setPinInUrl(p.pin);
     showView('pool');
