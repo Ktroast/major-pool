@@ -1319,6 +1319,7 @@ function renderAll() {
 // ===================================================================
 function showView(view) {
   document.getElementById('view-landing').classList.toggle('active', view === 'landing');
+  document.getElementById('view-hub').classList.toggle('active', view === 'hub');
   document.getElementById('view-pool').classList.toggle('active', view === 'pool');
 }
 function showTab(name) {
@@ -1326,6 +1327,58 @@ function showTab(name) {
   document.querySelectorAll('.pool-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
 }
 document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
+
+// ===================================================================
+// HUB VIEW
+// ===================================================================
+function formatHubDate(isoStr) {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (d.toDateString() === now.toDateString()) return 'Today';
+  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+async function showHub() {
+  showView('hub');
+  renderMasthead();
+  const list = document.getElementById('hub-pool-list');
+  list.innerHTML = '<div class="muted" style="padding: 22px;">Loading your pools…</div>';
+  const userId = getCurrentUserId();
+  if (!userId) { showView('landing'); renderMasthead(); return; }
+  try {
+    const { data, error } = await sb.from('user_pools')
+      .select('role, last_visited, joined_at, pools(id, pin, name, fee, prize1, prize2)')
+      .eq('user_id', userId)
+      .order('last_visited', { ascending: false });
+    if (error) throw error;
+    const rows = (data || []).filter(r => r.pools);
+    if (rows.length === 0) { showView('landing'); renderMasthead(); return; }
+    list.innerHTML = rows.map(row => {
+      const p = row.pools;
+      const badge = row.role === 'commissioner'
+        ? '<span class="hub-row-role-badge">Commissioner</span>'
+        : '';
+      const visited = formatHubDate(row.last_visited);
+      return `<div class="hub-row" data-pin="${escapeHtml(p.pin)}">
+          <div class="hub-row-main">
+            <div class="hub-row-name">${escapeHtml(p.name || 'Unnamed Pool')}</div>
+            <div class="hub-row-pin">${escapeHtml(p.pin)}${badge}</div>
+          </div>
+          <div class="hub-row-meta">${escapeHtml(visited)}</div>
+        </div>`;
+    }).join('');
+    list.querySelectorAll('.hub-row').forEach(row => {
+      row.addEventListener('click', () => { window.location.href = `/pin/${row.dataset.pin}`; });
+    });
+  } catch (e) {
+    console.error('Hub load error:', e);
+    list.innerHTML = '<div class="muted" style="padding: 22px;">Could not load pools. Try refreshing.</div>';
+  }
+}
 
 // ===================================================================
 // POOL LOADING
@@ -1555,6 +1608,31 @@ document.getElementById('join-pool-btn').addEventListener('click', async () => {
 });
 document.getElementById('join-pin-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('join-pool-btn').click();
+});
+
+document.getElementById('hub-new-pool-btn').addEventListener('click', () => {
+  document.getElementById('start-pool-btn').click();
+});
+
+document.getElementById('hub-add-pool-btn').addEventListener('click', () => {
+  showModal(`
+    <h3>Join a pool</h3>
+    <p class="muted" style="margin-bottom: 20px;">Enter the PIN a friend shared with you.</p>
+    <div class="join-form">
+      <div class="field-label">Pool PIN</div>
+      <input type="text" id="hub-pin-input" placeholder="— — — —" maxlength="6" autocomplete="off" autocapitalize="characters">
+      <button class="btn btn-secondary mt-16" id="hub-pin-submit" style="width:100%">Join Pool</button>
+    </div>
+  `);
+  document.getElementById('hub-pin-submit').addEventListener('click', async () => {
+    const pin = document.getElementById('hub-pin-input').value.trim().toUpperCase();
+    if (!pin) { toast('Enter a PIN.', true); return; }
+    hideModal();
+    await loadPool(pin);
+  });
+  document.getElementById('hub-pin-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('hub-pin-submit').click();
+  });
 });
 
 document.getElementById('save-tournament-btn').addEventListener('click', async () => {
