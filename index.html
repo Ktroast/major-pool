@@ -127,6 +127,23 @@
     </div>
   </section>
 
+  <!-- HUB (user's pools) -->
+  <section id="view-hub" class="panel">
+    <div class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-kicker">Your Pools</div>
+          <div class="section-title">Pools you've joined or created</div>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="btn btn-secondary btn-small" id="hub-add-pool-btn">Add a pool</button>
+          <button class="btn btn-small" id="hub-new-pool-btn">Start a new pool</button>
+        </div>
+      </div>
+      <div id="hub-pool-list" style="padding: 0;"></div>
+    </div>
+  </section>
+
   <!-- POOL VIEW -->
   <section id="view-pool" class="panel">
     <!-- PIN banner (commissioner only) -->
@@ -695,12 +712,15 @@ async function recordPoolVisit(p, role) {
   const userId = getCurrentUserId();
   if (!userId) return;
   const now = new Date().toISOString();
+  const payload = { user_id: userId, pool_id: p.id, last_visited: now };
+  if (role === 'commissioner') payload.role = 'commissioner';
+  // For 'player' calls: omit role. On insert the DB default ('player') applies;
+  // on conflict-update the existing role is preserved — commissioner rows can't
+  // be silently demoted by a player-context visit. joined_at is also omitted so
+  // it stays frozen at its original insert value (phase 1a invariant).
   const { error } = await sb.from('user_pools').upsert(
-    { user_id: userId, pool_id: p.id, role, last_visited: now },
+    payload,
     { onConflict: 'user_id,pool_id', ignoreDuplicates: false }
-    // joined_at is not included here — the DEFAULT now() on the column handles
-    // first insert; subsequent upserts only update columns we specify, so
-    // joined_at stays frozen at its original value.
   );
   if (error) console.error('user_pools upsert failed:', error);
 }
@@ -1302,6 +1322,7 @@ function renderAll() {
 // ===================================================================
 function showView(view) {
   document.getElementById('view-landing').classList.toggle('active', view === 'landing');
+  document.getElementById('view-hub').classList.toggle('active', view === 'hub');
   document.getElementById('view-pool').classList.toggle('active', view === 'pool');
 }
 function showTab(name) {
@@ -1309,6 +1330,58 @@ function showTab(name) {
   document.querySelectorAll('.pool-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
 }
 document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
+
+// ===================================================================
+// HUB VIEW
+// ===================================================================
+function formatHubDate(isoStr) {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (d.toDateString() === now.toDateString()) return 'Today';
+  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+async function showHub() {
+  showView('hub');
+  renderMasthead();
+  const list = document.getElementById('hub-pool-list');
+  list.innerHTML = '<div class="muted" style="padding: 22px;">Loading your pools…</div>';
+  const userId = getCurrentUserId();
+  if (!userId) { showView('landing'); renderMasthead(); return; }
+  try {
+    const { data, error } = await sb.from('user_pools')
+      .select('role, last_visited, joined_at, pools(id, pin, name, fee, prize1, prize2)')
+      .eq('user_id', userId)
+      .order('last_visited', { ascending: false });
+    if (error) throw error;
+    const rows = (data || []).filter(r => r.pools);
+    if (rows.length === 0) { showView('landing'); renderMasthead(); return; }
+    list.innerHTML = rows.map(row => {
+      const p = row.pools;
+      const badge = row.role === 'commissioner'
+        ? '<span class="hub-row-role-badge">Commissioner</span>'
+        : '';
+      const visited = formatHubDate(row.last_visited);
+      return `<div class="hub-row" data-pin="${escapeHtml(p.pin)}">
+          <div class="hub-row-main">
+            <div class="hub-row-name">${escapeHtml(p.name || 'Unnamed Pool')}</div>
+            <div class="hub-row-pin">${escapeHtml(p.pin)}${badge}</div>
+          </div>
+          <div class="hub-row-meta">${escapeHtml(visited)}</div>
+        </div>`;
+    }).join('');
+    list.querySelectorAll('.hub-row').forEach(row => {
+      row.addEventListener('click', () => { window.location.href = `/pin/${row.dataset.pin}`; });
+    });
+  } catch (e) {
+    console.error('Hub load error:', e);
+    list.innerHTML = '<div class="muted" style="padding: 22px;">Could not load pools. Try refreshing.</div>';
+  }
+}
 
 // ===================================================================
 // POOL LOADING
@@ -1320,7 +1393,13 @@ async function loadPool(pin) {
     pool = p;
     entries = await fetchEntries(p.id);
     const storedKey = getCommishKey(p.id);
-    isCommissioner = storedKey && storedKey === p.commissioner_key;
+    const { data: userPoolRow } = await sb.from('user_pools')
+      .select('role')
+      .eq('user_id', getCurrentUserId())
+      .eq('pool_id', p.id)
+      .maybeSingle();
+    const userPoolRole = userPoolRow?.role || null;
+    isCommissioner = (storedKey && storedKey === p.commissioner_key) || userPoolRole === 'commissioner';
     recordPoolVisit(p, isCommissioner ? 'commissioner' : 'player');
     setPinInUrl(p.pin);
     showView('pool');
@@ -1538,6 +1617,31 @@ document.getElementById('join-pool-btn').addEventListener('click', async () => {
 });
 document.getElementById('join-pin-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('join-pool-btn').click();
+});
+
+document.getElementById('hub-new-pool-btn').addEventListener('click', () => {
+  document.getElementById('start-pool-btn').click();
+});
+
+document.getElementById('hub-add-pool-btn').addEventListener('click', () => {
+  showModal(`
+    <h3>Join a pool</h3>
+    <p class="muted" style="margin-bottom: 20px;">Enter the PIN a friend shared with you.</p>
+    <div class="join-form">
+      <div class="field-label">Pool PIN</div>
+      <input type="text" id="hub-pin-input" placeholder="— — — —" maxlength="6" autocomplete="off" autocapitalize="characters">
+      <button class="btn btn-secondary mt-16" id="hub-pin-submit" style="width:100%">Join Pool</button>
+    </div>
+  `);
+  document.getElementById('hub-pin-submit').addEventListener('click', async () => {
+    const pin = document.getElementById('hub-pin-input').value.trim().toUpperCase();
+    if (!pin) { toast('Enter a PIN.', true); return; }
+    hideModal();
+    await loadPool(pin);
+  });
+  document.getElementById('hub-pin-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('hub-pin-submit').click();
+  });
 });
 
 document.getElementById('save-tournament-btn').addEventListener('click', async () => {
@@ -1797,15 +1901,67 @@ document.getElementById('delete-pool-btn').addEventListener('click', async () =>
 });
 
 // ===================================================================
+// LEGACY LOCALSTORAGE MIGRATION
+// ===================================================================
+// One-time migration of pre-1b localStorage state into user_pools.
+// Idempotent — safe to run on every load. Runs after auth, before routing.
+//
+// SAFETY NOTE: commish keys are only cleared if every key upserted OK.
+// A network error keeps them alive so the migration retries next load.
+// DO NOT change this logic without verifying commissioner access is preserved.
+async function migrateLegacyLocalStorage() {
+  let commishMap = {};
+  try { commishMap = JSON.parse(localStorage.getItem(LS_COMMISH) || '{}'); }
+  catch { commishMap = {}; }
+
+  const poolIds = Object.keys(commishMap);
+  let allCommishOk = true;
+
+  // a. Migrate each commissioner key into user_pools
+  for (const poolId of poolIds) {
+    try {
+      const { data: p, error } = await sb.from('pools').select('*').eq('id', poolId).maybeSingle();
+      if (error) throw error;
+      if (!p) continue; // pool was deleted — skip, treat as OK
+      if (p.commissioner_key === commishMap[poolId]) {
+        await recordPoolVisit(p, 'commissioner');
+      }
+    } catch (e) {
+      console.error('Legacy migration error (commish key, pool', poolId, '):', e);
+      allCommishOk = false;
+    }
+  }
+
+  // Clear keys only when every upsert succeeded — keeps them for retry on error
+  if (allCommishOk && poolIds.length > 0) localStorage.removeItem(LS_COMMISH);
+
+  // b. Migrate lastPin — runs every load until hub supersedes it (idempotent upsert)
+  const lastPin = localStorage.getItem('lastPin');
+  if (lastPin) {
+    try {
+      const { data: p, error } = await sb.from('pools').select('*').eq('pin', lastPin.toUpperCase()).maybeSingle();
+      if (error) throw error;
+      if (p) {
+        // Role: commissioner if we have a matching commish key, else player
+        const storedKey = commishMap[p.id];
+        const role = (storedKey && storedKey === p.commissioner_key) ? 'commissioner' : 'player';
+        await recordPoolVisit(p, role);
+      }
+    } catch (e) {
+      console.error('Legacy migration error (lastPin):', e);
+    }
+  }
+  // lastPin is intentionally NOT cleared — still used for iOS PWA path-strip fallback
+}
+
+// ===================================================================
 // BOOT
 // ===================================================================
 async function boot() {
-  // --- Auth session bootstrap (must complete before any pool loading) ---
-  // Keep currentUser in sync for the lifetime of the session.
+  // --- Auth session bootstrap ---
   sb.auth.onAuthStateChange((_event, session) => {
     currentUser = session?.user ?? null;
   });
-  // Use existing session if present; otherwise create an anonymous one.
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
     currentUser = session.user;
@@ -1815,20 +1971,49 @@ async function boot() {
     else currentUser = data.user;
   }
 
-  // --- Routing (unchanged from pre-auth) ---
+  // --- Legacy localStorage migration (runs before routing) ---
+  await migrateLegacyLocalStorage();
+
+  // --- Routing ---
   // Redirect old ?pin= links to path-based URLs so they still work
   const legacyPin = (new URLSearchParams(window.location.search).get('pin') || '').toUpperCase().trim();
-  if (legacyPin) {
-    window.history.replaceState({}, '', `/pin/${legacyPin}`);
-  }
-  const urlPin = getPinFromUrl();
-  if (urlPin) {
+  if (legacyPin) window.history.replaceState({}, '', `/pin/${legacyPin}`);
+
+  const pathMatch = window.location.pathname.match(/^\/pin\/([^/]+)/i);
+  if (pathMatch) {
+    // Direct pool link — load it, unchanged from pre-1b
+    const pin = pathMatch[1].toUpperCase().trim();
     document.getElementById('masthead-sub').innerHTML = '<span>Loading pool...</span>';
-    const ok = await loadPool(urlPin);
-    if (!ok) { showView('landing'); }
+    const ok = await loadPool(pin);
+    if (!ok) showView('landing');
   } else {
-    showView('landing');
-    renderMasthead();
+    // Root or unknown path — show hub if user has pools, else landing.
+    // The lastPin auto-redirect that lived here before 1b is intentionally
+    // removed; the hub replaces it. The lastPin fallback is preserved below
+    // for iOS PWA users who have a lastPin but no user_pools rows yet.
+    const userId = getCurrentUserId();
+    let hasPools = false;
+    if (userId) {
+      try {
+        const { data } = await sb.from('user_pools').select('pool_id').eq('user_id', userId).limit(1);
+        hasPools = (data || []).length > 0;
+      } catch (e) { console.error('Hub check failed:', e); }
+    }
+    if (hasPools) {
+      await showHub();
+    } else {
+      // iOS PWA fallback: user has lastPin but zero user_pools rows
+      // (home-screen icon bookmarked before 1b, or migration hasn't run yet).
+      const lastPin = localStorage.getItem('lastPin');
+      if (lastPin) {
+        document.getElementById('masthead-sub').innerHTML = '<span>Loading pool...</span>';
+        const ok = await loadPool(lastPin);
+        if (!ok) { showView('landing'); renderMasthead(); }
+      } else {
+        showView('landing');
+        renderMasthead();
+      }
+    }
   }
 }
 boot();

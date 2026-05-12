@@ -81,7 +81,7 @@ All three load-bearing scenarios confirmed working against the live Supabase pro
 
 ## Phase 1: Anonymous auth foundation + hub
 
-> Split into **1a** (invisible foundation, complete) and **1b** (visible hub, next). Items marked `[x]` landed in phase 1a.
+> Split into **1a** (invisible foundation, complete) and **1b** (visible hub, complete). All Phase 1 items shipped.
 
 Goal: every visitor has a Supabase user (anonymous unless claimed); the home screen icon opens to a hub of their pools.
 
@@ -106,25 +106,25 @@ Goal: every visitor has a Supabase user (anonymous unless claimed); the home scr
 - [x] On boot, before any pool loading, call `supabase.auth.signInAnonymously()` if no session exists
 - [x] Store `currentUser` in app state; expose via a small helper (`getCurrentUserId()`)
 - [x] When a pool is successfully loaded via `loadPool(pin)`, upsert a `user_pools` row with `last_visited = now()`
-- [ ] Build `renderHub()` — reads `user_pools` joined to `pools`, displays as a list sorted by `last_visited DESC`. Each row shows pool name, PIN, entry count, your entry's current standing (if you have one), and last-visited timestamp.
-- [ ] New view: `view-hub` panel between landing and pool views
-- [ ] Hub empty state: show the existing landing controls (start new pool, enter PIN) — empty hub === current landing UX
-- [ ] "Add a pool" affordance on a non-empty hub (paste PIN input, same as landing's join form)
+- [x] Build `renderHub()` — reads `user_pools` joined to `pools`, displays as a list sorted by `last_visited DESC`. Each row shows pool name, PIN, role badge (commissioner only), and last-visited timestamp. Entry count and standing deferred to phase 2.
+- [x] New view: `view-hub` panel between landing and pool views
+- [x] Hub empty state: show the existing landing controls (start new pool, enter PIN) — empty hub === current landing UX
+- [x] "Add a pool" affordance on a non-empty hub (paste PIN input, same as landing's join form)
 
 **Routing changes**
 
-- [ ] `/` → if user has 1+ pools in `user_pools`, show hub; if 0, show landing controls
-- [ ] Remove the `localStorage.lastPin` auto-redirect from `boot()` — the hub replaces it
-- [ ] `/pin/{pin}` → unchanged, loads that pool directly (and writes to `user_pools` on success)
-- [ ] `manifest.json` `start_url` → restore to `/` (was set to `/` already but no longer redirects away)
+- [x] `/` → if user has 1+ pools in `user_pools`, show hub; if 0, show landing controls
+- [x] Remove the `localStorage.lastPin` auto-redirect from `boot()` — the hub replaces it
+- [x] `/pin/{pin}` → unchanged, loads that pool directly (and writes to `user_pools` on success)
+- [x] `manifest.json` `start_url` → already `/`; no change needed
 
 **Backward compat**
 
-- [ ] Migrate existing `localStorage.lastPin` and `localStorage.major_pool_commish_keys_v1` into the new model on first load:
+- [x] Migrate existing `localStorage.lastPin` and `localStorage.major_pool_commish_keys_v1` into the new model on first load:
   - For each pool ID in the commish keys map, fetch the pool, write a `user_pools` row with `role: 'commissioner'` for the current user
   - For `lastPin`, fetch the pool, write a `user_pools` row with `role: 'player'`
-- [ ] After migration, clear the legacy localStorage keys
-- [ ] Keep `getCommishKey()` / `setCommishKey()` working through phase 1 as a fallback (used by phase 4)
+- [x] After migration, clear the legacy localStorage keys (commish keys cleared after all upserts succeed; `lastPin` intentionally NOT cleared — iOS PWA fallback)
+- [x] Keep `getCommishKey()` / `setCommishKey()` working through phase 1 as a fallback (used by phase 4)
 
 **Acceptance criteria**
 
