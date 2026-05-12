@@ -72,9 +72,32 @@ Acceptance criteria — all passed:
 
 ---
 
+## Auth migration — phase 1b (hub UI + localStorage migration)
+
+Merged on branch `phase-1b-hub`. Adds the visible half of phase 1 — the multi-pool hub at `/`, legacy state migration, and routing changes. Smoke tests to be run against Netlify preview deploy.
+
+| Item | Commit |
+|------|--------|
+| Add view-hub panel skeleton + CSS | 16501f4 |
+| Wire hub query + render hub rows | 4bd0005 |
+| Route / to hub when user has pools | 0534305 |
+| Migrate legacy localStorage state to user_pools | 8b3be1e |
+
+Acceptance criteria to verify in preview:
+- Fresh install → landing; create pool → `/pin/{pin}`; back to `/` → hub with commissioner badge
+- Hub row click navigates to `/pin/{pin}` and `last_visited` updates
+- Multiple pools appear sorted most-recent first
+- Legacy migration: `major_pool_commish_keys_v1` set → hub shows commissioner row, key cleared
+- Legacy migration: only `lastPin` set → hub shows player row, `lastPin` preserved
+- Empty hub (0 rows) → landing controls shown, not empty hub
+- `/pin/{pin}` direct link still works for users with no hub history
+- iOS PWA: `/` with `lastPin` set but 0 `user_pools` rows → loads last pool (legacy fallback)
+- RLS: `sb.from('user_pools').select('*').neq('user_id', getCurrentUserId())` returns 0 rows
+
+---
+
 ## Open / upcoming
 
-- **Auth phase 1b** — hub UI, routing, localStorage migration (see PLAN_AUTH.md Phase 1)
 - **Auth phases 2–5** — entry linking, magic-link claiming, commissioner migration, leagues (see PLAN_AUTH.md)
 - **Season-long scoring** — multi-week / multi-major cumulative leaderboard. Entries persist across events; scores accumulate over the season. Schema and UI TBD.
 - **Golfball mascot** — a golfball character who drinks and smokes. Vibes TBD.

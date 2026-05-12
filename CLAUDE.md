@@ -32,12 +32,18 @@ No `npm install` needed — uses Node's built-in `node:test`. Scoring/matching t
 
 **Cache TTL is 2 minutes** (proxy), not 5. The client polls every 5 minutes. These are intentionally different.
 
-**Anonymous Supabase auth (phase 1a):**
+**Anonymous Supabase auth (phases 1a + 1b — complete):**
 - Every visitor gets an anonymous Supabase user on boot via `signInAnonymously()` — `currentUser` and `getCurrentUserId()` are the accessors. `onAuthStateChange()` keeps `currentUser` current.
 - `user_pools` tracks (user_id, pool_id, role) with PK on the pair; `recordPoolVisit()` upserts on each pool load and create. Failures are console.error'd, never surfaced.
 - The upsert omits `joined_at` from the payload so on-conflict updates leave it frozen — matters for phase 5 settled-pool math.
 - RLS on `user_pools` enforces `auth.uid() = user_id` for all operations.
-- Phase 1b is next: hub UI + migrate legacy localStorage state.
+
+**Hub (phase 1b):**
+- `/` is now the hub for users with 1+ pools in `user_pools`; it shows all their pools sorted by `last_visited DESC`. Empty hub (0 rows) falls through to the existing landing controls — no separate empty-hub UX.
+- Hub is rendered by `showHub()`: queries `user_pools` joined to `pools`, renders `.hub-row` elements, each clickable to navigate `window.location.href = /pin/{pin}`.
+- `boot()` routing at `/`: queries `user_pools` (limit 1); if rows > 0 → `showHub()`; if 0 rows → tries `localStorage.lastPin` (iOS PWA fallback, see below) → else landing.
+- `lastPin` fallback in `boot()` fires only for users at `/` with 0 `user_pools` rows — i.e. iOS PWA users with old home-screen icons not yet reflected in the DB. The fallback loads the last pool directly. Once `migrateLegacyLocalStorage()` runs, this path is effectively dead for returning users.
+- `migrateLegacyLocalStorage()` runs in `boot()` after auth, before routing. Iterates `major_pool_commish_keys_v1`, verifies each key against `pools.commissioner_key`, upserts a commissioner row via `recordPoolVisit()`. Also migrates `lastPin` as a player row. Clears commish keys only if all upserts succeeded (preserves them for retry on network error). **Does not clear `lastPin`** — still needed for iOS PWA path-strip fallback.
 
 **URL routing is path-based: `/pin/{pin}`.** Shareable links look like `https://putalittledrawonit.netlify.app/pin/ABC123`. The old `?pin=ABC123` query-string format is deprecated — boot() detects it and redirects to the path form so old links still work. Netlify serves `/pin/*` via a 200 rewrite to `index.html`. A `lastPin` key in localStorage provides a fallback for iOS home screen launches (Safari can strip the path on PWA launch from the home screen). Users with the old `?pin=` home screen icon should re-add it once with the new `/pin/{pin}` URL to get reliable path-based launch.
 
@@ -57,5 +63,4 @@ Friends with old `?pin=` bookmarks are auto-redirected client-side. Home screen 
 
 ## What's still open (from PROGRESS.md)
 
-- Auth migration phase 1b — hub UI, routing to hub, localStorage migration
 - Auth migration phases 2–5 — see PLAN_AUTH.md
