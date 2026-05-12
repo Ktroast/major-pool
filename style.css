@@ -219,6 +219,8 @@
   .landing-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 28px; }
   .landing-divider { display: flex; align-items: center; gap: 16px; margin: 36px auto; max-width: 400px; color: var(--ink-soft); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; }
   .landing-divider::before, .landing-divider::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+  .landing-section-heading { font-family: 'Fraunces', serif; font-style: italic; font-weight: 600; font-size: 22px; margin: 0 0 8px; color: var(--ink); }
+  .landing-signin-section { margin-top: 28px; padding: 24px 20px 0; background: rgba(176, 138, 62, 0.07); }
   .join-form { max-width: 360px; margin: 0 auto; }
   .join-form input { text-align: center; font-family: 'Fraunces', serif; font-size: 28px; letter-spacing: 0.2em; padding: 14px; }
 
@@ -364,11 +366,6 @@
   color: var(--ink); padding: 10px 14px; transition: background 0.15s;
 }
 .hub-profile-menu-item:hover { background: rgba(45,74,43,0.06); }
-
-.hub-empty-signin-caption {
-  margin-top: 20px; text-align: center;
-  font-size: 13px; color: var(--ink-soft);
-}
 
 /* ── Hub view ── */
 .hub-row {

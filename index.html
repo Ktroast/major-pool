@@ -113,18 +113,26 @@
     <div class="section">
       <div class="landing">
         <h2 style="font-family: 'Fraunces', serif; font-style: italic; font-size: 32px; margin-bottom: 14px;">Welcome to the clubhouse.</h2>
-        <p class="muted" style="max-width: 480px; margin: 0 auto;">Start a new pool for this week's major, or enter a PIN to join one your friend started.</p>
-        <div class="landing-actions">
-          <button class="btn btn-big" id="start-pool-btn">Start a New Pool</button>
+        <p class="muted" style="max-width: 480px; margin: 0 auto;">A pool for the gentleman's wager.</p>
+        <div id="hub-empty-signin-caption" class="landing-signin-section" style="display:none;">
+          <h3 class="landing-section-heading">Already played?</h3>
+          <p class="muted" style="font-size:13px; margin-bottom:0;">Sign in with your email to find your pools across devices.</p>
+          <div class="landing-actions">
+            <button class="btn btn-big" id="landing-signin-btn">Sign in to find my pools</button>
+          </div>
+          <div class="landing-divider">or</div>
         </div>
-        <div class="landing-divider">or</div>
-        <div class="join-form">
-          <div class="field-label">Enter Pool PIN</div>
-          <input type="text" id="join-pin-input" placeholder="— — — —" maxlength="6" autocomplete="off" autocapitalize="characters">
-          <button class="btn btn-secondary mt-16" id="join-pool-btn" style="width:100%">Join Pool</button>
-        </div>
-        <div id="hub-empty-signin-caption" class="hub-empty-signin-caption" style="display:none;">
-          Already played from another device? <button class="hub-signin-link" id="landing-signin-btn">Sign in to find your pools.</button>
+        <div style="margin-top:28px;">
+          <h3 class="landing-section-heading">First time here?</h3>
+          <div class="landing-actions">
+            <button class="btn btn-secondary" id="start-pool-btn">Start a New Pool</button>
+          </div>
+          <div class="landing-divider">or</div>
+          <div class="join-form">
+            <div class="field-label">Enter Pool PIN</div>
+            <input type="text" id="join-pin-input" placeholder="— — — —" maxlength="6" autocomplete="off" autocapitalize="characters">
+            <button class="btn btn-secondary mt-16" id="join-pool-btn" style="width:100%">Join Pool</button>
+          </div>
         </div>
       </div>
     </div>
