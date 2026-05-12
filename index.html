@@ -851,66 +851,89 @@ function renderSignInCaption() {
 }
 
 // ===================================================================
-// SIGN-IN MODAL (claim + recovery flows)
+// SIGN-IN MODAL
 // ===================================================================
 function showSignInModal() {
   showModal(`
-    <h3>Sign in</h3>
-    <p style="margin-bottom:18px;font-size:14px;color:var(--ink-soft);">Enter your email to access your pools across devices.</p>
-    <label class="field">
+    <h3>Sign in to find your pools</h3>
+    <label class="field" style="margin-top:18px;">
       <span class="field-label">Email</span>
       <input type="email" id="signin-email" placeholder="you@example.com" autocomplete="email">
     </label>
+    <p id="signin-validation" style="font-size:12px;color:var(--claret);min-height:18px;margin-top:-8px;margin-bottom:10px;"></p>
     <button class="btn" style="width:100%" id="signin-submit">Send magic link</button>
     <div id="signin-status" style="margin-top:16px;font-size:13px;line-height:1.5;"></div>
   `);
-  document.getElementById('signin-submit').addEventListener('click', handleSignIn);
-  document.getElementById('signin-email').addEventListener('keydown', e => {
-    if (e.key === 'Enter') handleSignIn();
+  document.getElementById(‘signin-submit’).addEventListener(‘click’, handleSignIn);
+  document.getElementById(‘signin-email’).addEventListener(‘keydown’, e => {
+    if (e.key === ‘Enter’) handleSignIn();
   });
-  setTimeout(() => document.getElementById('signin-email')?.focus(), 60);
+  setTimeout(() => document.getElementById(‘signin-email’)?.focus(), 60);
 }
 
 async function handleSignIn() {
-  const emailEl = document.getElementById('signin-email');
-  const statusEl = document.getElementById('signin-status');
-  const submitBtn = document.getElementById('signin-submit');
+  const emailEl = document.getElementById(‘signin-email’);
+  const statusEl = document.getElementById(‘signin-status’);
+  const validationEl = document.getElementById(‘signin-validation’);
+  const submitBtn = document.getElementById(‘signin-submit’);
   if (!emailEl || !statusEl) return;
+
   const email = emailEl.value.trim();
-  if (!email) { statusEl.textContent = 'Please enter your email address.'; return; }
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Sending…';
-  statusEl.textContent = '';
-
-  if (currentUser?.is_anonymous) {
-    // Claim flow: updateUser preserves user.id through the confirmation step.
-    // (Verified in the May 11 spike — do NOT switch to linkIdentity, it's OAuth-only.)
-    const { error } = await sb.auth.updateUser({ email });
-    if (!error) {
-      statusEl.innerHTML = 'Check your email for a confirmation link — clicking it will save your pools to this address. <em style="color:var(--ink-soft);">Check your spam or junk folder if it doesn\'t arrive.</em>';
-    } else {
-      // Most likely: email already claimed on another device. Offer sign-in instead.
-      statusEl.innerHTML = `Couldn’t save to that email. <button class="hub-signin-link" id="signin-fallback-btn">Try signing in instead →</button>`;
-      document.getElementById('signin-fallback-btn').addEventListener('click', () => sendOtp(email));
-    }
-  } else {
-    await sendOtp(email);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (validationEl) validationEl.textContent = ‘Please enter a valid email address.’;
+    return;
   }
-  submitBtn.disabled = false;
-  submitBtn.textContent = 'Send magic link';
-}
+  if (validationEl) validationEl.textContent = ‘’;
 
-async function sendOtp(email) {
-  const statusEl = document.getElementById('signin-status');
-  if (!statusEl) return;
-  statusEl.textContent = 'Sending sign-in link…';
-  const { error } = await sb.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: window.location.origin + '/' }
-  });
-  statusEl.innerHTML = error
-    ? 'Something went wrong. Please try again.'
-    : 'Check your email for a sign-in link. <em style="color:var(--ink-soft);">Check your spam or junk folder if it doesn\'t arrive.</em>';
+  submitBtn.disabled = true;
+  submitBtn.textContent = ‘Sending…’;
+  statusEl.textContent = ‘’;
+
+  let success = false;
+  let lastError = null;
+
+  // If this anonymous user already has pools, try upgrading their session in place
+  // so their user_pools rows carry over. updateUser() preserves user.id through the
+  // confirmation step (verified in the May 11 spike). If it fails for any reason
+  // (email collision, network, etc.) we fall through to OTP silently — the user
+  // never sees the distinction.
+  if (currentUser?.is_anonymous) {
+    const userId = getCurrentUserId();
+    const { data: existingPools, error: poolsErr } = await sb
+      .from(‘user_pools’).select(‘pool_id’).eq(‘user_id’, userId).limit(1);
+    if (!poolsErr && existingPools?.length > 0) {
+      const { error: updateErr } = await sb.auth.updateUser({ email });
+      if (!updateErr) success = true;
+      else lastError = updateErr;
+    }
+  }
+
+  if (!success) {
+    const { error: otpErr } = await sb.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin + ‘/’ }
+    });
+    if (!otpErr) success = true;
+    else lastError = otpErr;
+  }
+
+  submitBtn.disabled = false;
+  submitBtn.textContent = ‘Send magic link’;
+
+  if (success) {
+    document.getElementById(‘modal-content’).innerHTML = `
+      <h3>Check your email</h3>
+      <p style="margin-bottom:16px;font-size:14px;line-height:1.6;">We sent a sign-in link to <strong>${escapeHtml(email)}</strong>. Click it and your pools will be waiting for you here.</p>
+      <p style="margin-bottom:24px;font-size:13px;color:var(--ink-soft);">Check your spam or junk folder if it doesn’t arrive.</p>
+      <button class="btn btn-secondary" style="width:100%" id="modal-close-btn">Close</button>
+    `;
+    document.getElementById(‘modal-close-btn’).addEventListener(‘click’, hideModal);
+  } else {
+    const isRateLimit = lastError?.status === 429 || /rate|429/i.test(lastError?.message || ‘’);
+    statusEl.textContent = isRateLimit
+      ? ‘Too many sign-in attempts. Please wait a few minutes and try again.’
+      : ‘Couldn\’t send your sign-in link. Please try again.’;
+  }
 }
 
 // ===================================================================
