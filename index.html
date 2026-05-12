@@ -1895,12 +1895,10 @@ document.getElementById('delete-pool-btn').addEventListener('click', async () =>
 // BOOT
 // ===================================================================
 async function boot() {
-  // --- Auth session bootstrap (must complete before any pool loading) ---
-  // Keep currentUser in sync for the lifetime of the session.
+  // --- Auth session bootstrap ---
   sb.auth.onAuthStateChange((_event, session) => {
     currentUser = session?.user ?? null;
   });
-  // Use existing session if present; otherwise create an anonymous one.
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
     currentUser = session.user;
@@ -1910,20 +1908,49 @@ async function boot() {
     else currentUser = data.user;
   }
 
-  // --- Routing (unchanged from pre-auth) ---
+  // --- Legacy localStorage migration (runs before routing) ---
+  await migrateLegacyLocalStorage();
+
+  // --- Routing ---
   // Redirect old ?pin= links to path-based URLs so they still work
   const legacyPin = (new URLSearchParams(window.location.search).get('pin') || '').toUpperCase().trim();
-  if (legacyPin) {
-    window.history.replaceState({}, '', `/pin/${legacyPin}`);
-  }
-  const urlPin = getPinFromUrl();
-  if (urlPin) {
+  if (legacyPin) window.history.replaceState({}, '', `/pin/${legacyPin}`);
+
+  const pathMatch = window.location.pathname.match(/^\/pin\/([^/]+)/i);
+  if (pathMatch) {
+    // Direct pool link — load it, unchanged from pre-1b
+    const pin = pathMatch[1].toUpperCase().trim();
     document.getElementById('masthead-sub').innerHTML = '<span>Loading pool...</span>';
-    const ok = await loadPool(urlPin);
-    if (!ok) { showView('landing'); }
+    const ok = await loadPool(pin);
+    if (!ok) showView('landing');
   } else {
-    showView('landing');
-    renderMasthead();
+    // Root or unknown path — show hub if user has pools, else landing.
+    // The lastPin auto-redirect that lived here before 1b is intentionally
+    // removed; the hub replaces it. The lastPin fallback is preserved below
+    // for iOS PWA users who have a lastPin but no user_pools rows yet.
+    const userId = getCurrentUserId();
+    let hasPools = false;
+    if (userId) {
+      try {
+        const { data } = await sb.from('user_pools').select('pool_id').eq('user_id', userId).limit(1);
+        hasPools = (data || []).length > 0;
+      } catch (e) { console.error('Hub check failed:', e); }
+    }
+    if (hasPools) {
+      await showHub();
+    } else {
+      // iOS PWA fallback: user has lastPin but zero user_pools rows
+      // (home-screen icon bookmarked before 1b, or migration hasn't run yet).
+      const lastPin = localStorage.getItem('lastPin');
+      if (lastPin) {
+        document.getElementById('masthead-sub').innerHTML = '<span>Loading pool...</span>';
+        const ok = await loadPool(lastPin);
+        if (!ok) { showView('landing'); renderMasthead(); }
+      } else {
+        showView('landing');
+        renderMasthead();
+      }
+    }
   }
 }
 boot();
