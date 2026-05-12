@@ -1892,6 +1892,60 @@ document.getElementById('delete-pool-btn').addEventListener('click', async () =>
 });
 
 // ===================================================================
+// LEGACY LOCALSTORAGE MIGRATION
+// ===================================================================
+// One-time migration of pre-1b localStorage state into user_pools.
+// Idempotent — safe to run on every load. Runs after auth, before routing.
+//
+// SAFETY NOTE: commish keys are only cleared if every key upserted OK.
+// A network error keeps them alive so the migration retries next load.
+// DO NOT change this logic without verifying commissioner access is preserved.
+async function migrateLegacyLocalStorage() {
+  let commishMap = {};
+  try { commishMap = JSON.parse(localStorage.getItem(LS_COMMISH) || '{}'); }
+  catch { commishMap = {}; }
+
+  const poolIds = Object.keys(commishMap);
+  let allCommishOk = true;
+
+  // a. Migrate each commissioner key into user_pools
+  for (const poolId of poolIds) {
+    try {
+      const { data: p, error } = await sb.from('pools').select('*').eq('id', poolId).maybeSingle();
+      if (error) throw error;
+      if (!p) continue; // pool was deleted — skip, treat as OK
+      if (p.commissioner_key === commishMap[poolId]) {
+        await recordPoolVisit(p, 'commissioner');
+      }
+    } catch (e) {
+      console.error('Legacy migration error (commish key, pool', poolId, '):', e);
+      allCommishOk = false;
+    }
+  }
+
+  // Clear keys only when every upsert succeeded — keeps them for retry on error
+  if (allCommishOk && poolIds.length > 0) localStorage.removeItem(LS_COMMISH);
+
+  // b. Migrate lastPin — runs every load until hub supersedes it (idempotent upsert)
+  const lastPin = localStorage.getItem('lastPin');
+  if (lastPin) {
+    try {
+      const { data: p, error } = await sb.from('pools').select('*').eq('pin', lastPin.toUpperCase()).maybeSingle();
+      if (error) throw error;
+      if (p) {
+        // Role: commissioner if we have a matching commish key, else player
+        const storedKey = commishMap[p.id];
+        const role = (storedKey && storedKey === p.commissioner_key) ? 'commissioner' : 'player';
+        await recordPoolVisit(p, role);
+      }
+    } catch (e) {
+      console.error('Legacy migration error (lastPin):', e);
+    }
+  }
+  // lastPin is intentionally NOT cleared — still used for iOS PWA path-strip fallback
+}
+
+// ===================================================================
 // BOOT
 // ===================================================================
 async function boot() {
