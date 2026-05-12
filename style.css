@@ -326,6 +326,50 @@
     .lb-picks .short-name { display: none; }
   }
 
+/* ── Hub auth UI (sign-in link, profile chip, dropdown) ── */
+.hub-signin-link {
+  background: none; border: none; padding: 0;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-soft); cursor: pointer; transition: color 0.15s;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.hub-signin-link:hover { color: var(--moss); }
+
+.hub-profile-wrap { position: relative; }
+.hub-profile-chip {
+  background: none; cursor: pointer; transition: all 0.15s;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  letter-spacing: 0.06em; color: var(--ink-soft);
+  border: 1px solid var(--rule); padding: 4px 10px;
+}
+.hub-profile-chip:hover { border-color: var(--moss); color: var(--moss); }
+
+.hub-profile-menu {
+  position: absolute; top: calc(100% + 6px); right: 0;
+  min-width: 200px; background: var(--bone);
+  border: 1px solid var(--ink); z-index: 20;
+  box-shadow: var(--shadow);
+}
+.hub-profile-menu.hidden { display: none; }
+.hub-profile-menu-email {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  color: var(--ink-soft); padding: 12px 14px;
+  border-bottom: 1px solid var(--rule); word-break: break-all;
+}
+.hub-profile-menu-item {
+  display: block; width: 100%; text-align: left;
+  background: none; border: none; cursor: pointer;
+  font-family: 'Jost', sans-serif; font-size: 13px;
+  color: var(--ink); padding: 10px 14px; transition: background 0.15s;
+}
+.hub-profile-menu-item:hover { background: rgba(45,74,43,0.06); }
+
+.hub-empty-signin-caption {
+  margin-top: 20px; text-align: center;
+  font-size: 13px; color: var(--ink-soft);
+}
+
 /* ── Hub view ── */
 .hub-row {
   display: flex; justify-content: space-between; align-items: center;
