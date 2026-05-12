@@ -81,7 +81,7 @@ All three load-bearing scenarios confirmed working against the live Supabase pro
 
 ## Phase 1: Anonymous auth foundation + hub
 
-> Split into **1a** (invisible foundation, complete) and **1b** (visible hub, next). Items marked `[x]` landed in phase 1a.
+> Split into **1a** (invisible foundation, complete) and **1b** (visible hub, complete). All Phase 1 items shipped.
 
 Goal: every visitor has a Supabase user (anonymous unless claimed); the home screen icon opens to a hub of their pools.
 
