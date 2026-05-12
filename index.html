@@ -799,6 +799,108 @@ function renderMasthead() {
 }
 
 // ===================================================================
+// RENDER: HUB AUTH UI + SIGN-IN CAPTION
+// ===================================================================
+function renderHubAuthUI() {
+  const el = document.getElementById('hub-auth-ui');
+  if (!el) return;
+  if (!currentUser) { el.innerHTML = ''; return; }
+  if (currentUser.is_anonymous) {
+    el.innerHTML = `<button class="hub-signin-link" id="hub-signin-btn">Sign in</button>`;
+    document.getElementById('hub-signin-btn').addEventListener('click', showSignInModal);
+  } else {
+    const email = currentUser.email || '';
+    const display = email.length > 26 ? email.slice(0, 23) + '…' : email;
+    el.innerHTML = `
+      <div class="hub-profile-wrap">
+        <button class="hub-profile-chip" id="hub-profile-chip">${escapeHtml(display)}</button>
+        <div class="hub-profile-menu hidden" id="hub-profile-menu">
+          <div class="hub-profile-menu-email">${escapeHtml(email)}</div>
+          <button class="hub-profile-menu-item" id="hub-signout-btn">Sign out</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('hub-profile-chip').addEventListener('click', e => {
+      e.stopPropagation();
+      document.getElementById('hub-profile-menu').classList.toggle('hidden');
+    });
+    document.getElementById('hub-signout-btn').addEventListener('click', async () => {
+      await sb.auth.signOut();
+      window.location.reload();
+    });
+  }
+}
+
+function renderSignInCaption() {
+  const el = document.getElementById('hub-empty-signin-caption');
+  if (!el) return;
+  el.style.display = currentUser?.is_anonymous ? '' : 'none';
+}
+
+// ===================================================================
+// SIGN-IN MODAL (claim + recovery flows)
+// ===================================================================
+function showSignInModal() {
+  showModal(`
+    <h3>Sign in</h3>
+    <p style="margin-bottom:18px;font-size:14px;color:var(--ink-soft);">Enter your email to access your pools across devices.</p>
+    <label class="field">
+      <span class="field-label">Email</span>
+      <input type="email" id="signin-email" placeholder="you@example.com" autocomplete="email">
+    </label>
+    <button class="btn" style="width:100%" id="signin-submit">Send magic link</button>
+    <div id="signin-status" style="margin-top:16px;font-size:13px;line-height:1.5;"></div>
+  `);
+  document.getElementById('signin-submit').addEventListener('click', handleSignIn);
+  document.getElementById('signin-email').addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleSignIn();
+  });
+  setTimeout(() => document.getElementById('signin-email')?.focus(), 60);
+}
+
+async function handleSignIn() {
+  const emailEl = document.getElementById('signin-email');
+  const statusEl = document.getElementById('signin-status');
+  const submitBtn = document.getElementById('signin-submit');
+  if (!emailEl || !statusEl) return;
+  const email = emailEl.value.trim();
+  if (!email) { statusEl.textContent = 'Please enter your email address.'; return; }
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Sending…';
+  statusEl.textContent = '';
+
+  if (currentUser?.is_anonymous) {
+    // Claim flow: updateUser preserves user.id through the confirmation step.
+    // (Verified in the May 11 spike — do NOT switch to linkIdentity, it's OAuth-only.)
+    const { error } = await sb.auth.updateUser({ email });
+    if (!error) {
+      statusEl.innerHTML = 'Check your email for a confirmation link — clicking it will save your pools to this address. <em style="color:var(--ink-soft);">Check your spam or junk folder if it doesn\'t arrive.</em>';
+    } else {
+      // Most likely: email already claimed on another device. Offer sign-in instead.
+      statusEl.innerHTML = `Couldn’t save to that email. <button class="hub-signin-link" id="signin-fallback-btn">Try signing in instead →</button>`;
+      document.getElementById('signin-fallback-btn').addEventListener('click', () => sendOtp(email));
+    }
+  } else {
+    await sendOtp(email);
+  }
+  submitBtn.disabled = false;
+  submitBtn.textContent = 'Send magic link';
+}
+
+async function sendOtp(email) {
+  const statusEl = document.getElementById('signin-status');
+  if (!statusEl) return;
+  statusEl.textContent = 'Sending sign-in link…';
+  const { error } = await sb.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: window.location.origin + '/' }
+  });
+  statusEl.innerHTML = error
+    ? 'Something went wrong. Please try again.'
+    : 'Check your email for a sign-in link. <em style="color:var(--ink-soft);">Check your spam or junk folder if it doesn\'t arrive.</em>';
+}
+
+// ===================================================================
 // RENDER: PIN BANNER (commissioner only)
 // ===================================================================
 function renderPinBanner() {
@@ -1959,8 +2061,18 @@ async function migrateLegacyLocalStorage() {
 // ===================================================================
 async function boot() {
   // --- Auth session bootstrap ---
-  sb.auth.onAuthStateChange((_event, session) => {
+  sb.auth.onAuthStateChange((event, session) => {
     currentUser = session?.user ?? null;
+    // Detect anonymous → claimed transition. USER_UPDATED fires when an
+    // anonymous user confirms their email via updateUser(); SIGNED_IN fires
+    // when a claimed user signs in via OTP on a new device. Neither fires
+    // on INITIAL_SESSION (page load with existing session), so returning
+    // claimed users don't see the toast on every load.
+    if ((event === 'USER_UPDATED' || event === 'SIGNED_IN') && currentUser && !currentUser.is_anonymous) {
+      toast(`Signed in as ${currentUser.email}. Your pools are saved to this email.`);
+      renderHubAuthUI();
+      if (document.getElementById('view-hub').classList.contains('active')) showHub();
+    }
   });
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
