@@ -123,6 +123,9 @@
           <input type="text" id="join-pin-input" placeholder="— — — —" maxlength="6" autocomplete="off" autocapitalize="characters">
           <button class="btn btn-secondary mt-16" id="join-pool-btn" style="width:100%">Join Pool</button>
         </div>
+        <div id="hub-empty-signin-caption" class="hub-empty-signin-caption" style="display:none;">
+          Already played from another device? <button class="hub-signin-link" id="landing-signin-btn">Sign in to find your pools.</button>
+        </div>
       </div>
     </div>
   </section>
@@ -788,6 +791,7 @@ function setPinInUrl(pin) {
 // RENDER: MASTHEAD + CONNECTION
 // ===================================================================
 function renderMasthead() {
+  renderSignInCaption();
   const el = document.getElementById('masthead-sub');
   if (!pool) { el.innerHTML = '<span>A pool for the golf gentleman</span>'; return; }
   const pot = entries.length * (pool.fee || 0);
@@ -1713,6 +1717,8 @@ document.getElementById('start-pool-btn').addEventListener('click', () => {
     } catch (e) { toast('Failed to create: ' + e.message, true); }
   });
 });
+
+document.getElementById('landing-signin-btn').addEventListener('click', showSignInModal);
 
 document.getElementById('join-pool-btn').addEventListener('click', async () => {
   const pin = document.getElementById('join-pin-input').value.trim().toUpperCase();
