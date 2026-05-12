@@ -46,6 +46,16 @@ No `npm install` needed — uses Node's built-in `node:test`. Scoring/matching t
 - `lastPin` fallback in `boot()` fires only for users at `/` with 0 `user_pools` rows — i.e. iOS PWA users with old home-screen icons not yet reflected in the DB. The fallback loads the last pool directly. Once `migrateLegacyLocalStorage()` runs, this path is effectively dead for returning users.
 - `migrateLegacyLocalStorage()` runs in `boot()` after auth, before routing. Iterates `major_pool_commish_keys_v1`, verifies each key against `pools.commissioner_key`, upserts a commissioner row via `recordPoolVisit()`. Also migrates `lastPin` as a player row. Clears commish keys only if all upserts succeeded (preserves them for retry on network error). **Does not clear `lastPin`** — still needed for iOS PWA path-strip fallback.
 
+**Account claiming (phase 3):**
+- Anonymous vs claimed state is determined by `currentUser.is_anonymous`. Claimed users have `is_anonymous: false` and `currentUser.email` set.
+- **Claim flow** (`updateUser`): anonymous user enters email → `supabase.auth.updateUser({ email })` → confirmation email → user clicks link → `user.id` is preserved (verified in May 11 spike). `onAuthStateChange` fires `USER_UPDATED`; the toast + hub re-render handle the transition in-place.
+- **Recovery flow** (`signInWithOtp`): claimed user on a new device enters email → `supabase.auth.signInWithOtp()` → magic link → page redirects to `/` → `onAuthStateChange` fires `SIGNED_IN` → same toast + hub re-render.
+- **Do NOT use `linkIdentity`** — it is OAuth-only in Supabase JS v2. `updateUser({ email })` is the correct API for adding email to an anonymous user.
+- **Email collision**: if `updateUser` returns any error, the modal offers an OTP sign-in fallback. The most common cause is an email already registered on another device. Clicking "try signing in instead" sends an OTP for that email. The current device's anonymous data is discarded; the claimed identity's history is recovered.
+- **Role stickiness through claim**: a claimed user keeps all commissioner rows they held as anonymous, because `user.id` is preserved through the claim. The role-stickiness invariant from phase 1b extends through claim without any special handling.
+- **`onAuthStateChange` toast logic**: fires on `USER_UPDATED` or `SIGNED_IN` when `!currentUser.is_anonymous`. Intentionally excludes `INITIAL_SESSION` so returning claimed users don't see the toast on every page load.
+- **Sign-out**: `supabase.auth.signOut()` + `window.location.reload()`. On reload, `getSession()` returns null, `signInAnonymously()` runs, and a fresh anonymous session starts. Previous claimed history is recoverable by signing back in.
+
 **URL routing is path-based: `/pin/{pin}`.** Shareable links look like `https://putalittledrawonit.netlify.app/pin/ABC123`. The old `?pin=ABC123` query-string format is deprecated — boot() detects it and redirects to the path form so old links still work. Netlify serves `/pin/*` via a 200 rewrite to `index.html`. A `lastPin` key in localStorage provides a fallback for iOS home screen launches (Safari can strip the path on PWA launch from the home screen). Users with the old `?pin=` home screen icon should re-add it once with the new `/pin/{pin}` URL to get reliable path-based launch.
 
 ## Migration notes (2026-05-10)
@@ -64,4 +74,4 @@ Friends with old `?pin=` bookmarks are auto-redirected client-side. Home screen 
 
 ## What's still open (from PROGRESS.md)
 
-- Auth migration phases 2–5 — see PLAN_AUTH.md
+- Auth migration phases 2, 4, 5 — see PLAN_AUTH.md (phase 3 is complete; phase 2 was intentionally skipped)

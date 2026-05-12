@@ -101,8 +101,30 @@ Acceptance criteria — all passed:
 
 ---
 
+## Auth migration — phase 3 (account claiming via magic link)
+
+On branch `phase-3-claim-flow`. Adds the sign-in / claim flow — anonymous users can attach an email to their account to make their pool history portable across devices. Phase 2 (entry linking) intentionally skipped; phase 3 prioritised because phase 1b made cross-device pain immediately visible.
+
+| Item | Commit |
+|------|--------|
+| Sign-in modal + auth callback handling | 17cb2b1 |
+| Hub header sign-in link + profile chip | 2b4cef2 |
+| Empty-hub recovery caption | b17e3b6 |
+| CSS for hub auth UI | 3d0e96f |
+
+Acceptance criteria — pending smoke test against Netlify preview:
+- [ ] Anonymous user with pools sees Sign in link in hub header
+- [ ] Anonymous user with no pools sees recovery caption on landing
+- [ ] Claim happy path: email entered → confirmation email arrives with correct template → link clicked → redirect → toast shows → profile chip appears → `user.id` unchanged
+- [ ] Post-claim: hub shows same pools; commissioner status preserved
+- [ ] Cross-device recovery: new anonymous session → sign in → OTP link → hub shows claimed account's pools
+- [ ] Sign out → fresh anonymous session → hub empty
+- [ ] Email collision: `updateUser` error → "try signing in instead" → OTP flow completes
+
+---
+
 ## Open / upcoming
 
-- **Auth phases 2–5** — entry linking, magic-link claiming, commissioner migration, leagues (see PLAN_AUTH.md)
+- **Auth phases 2, 4, 5** — entry linking (skipped for now), commissioner migration, leagues (see PLAN_AUTH.md)
 - **Season-long scoring** — multi-week / multi-major cumulative leaderboard. Entries persist across events; scores accumulate over the season. Schema and UI TBD.
 - **Golfball mascot** — a golfball character who drinks and smokes. Vibes TBD.
