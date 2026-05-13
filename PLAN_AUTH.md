@@ -174,17 +174,17 @@ Goal: users can upgrade their anonymous account to a real one with an email, unl
 
 **Client changes**
 
-- [ ] Add a "Sign in" link to the hub header (visible only to anonymous users)
-- [ ] Sign-in modal: email input → calls `supabase.auth.updateUser({ email })` on anonymous users (NOT `linkIdentity` — that's OAuth-only) or `signInWithOtp` on returning visitors. The `updateUser` path sends a confirmation email; clicking the link preserves `user.id` and flips `is_anonymous` to false.
-- [ ] Magic link redirects back to `/` and shows a "signed in as foo@bar.com" indicator
-- [ ] Empty-hub CTA: "Played before? Sign in to find your pools across devices." — only shown when hub is empty AND user is anonymous
-- [ ] Cross-device flow: visiting `/` on a new device with no anonymous session → landing page → "Sign in" → magic link → hub populated from `user_pools` for the now-claimed user
-- [ ] Sign-out button in a small profile menu in the hub header
+- [x] Add a "Sign in" link to the hub header (visible only to anonymous users)
+- [x] Sign-in modal: email input → calls `supabase.auth.updateUser({ email })` on anonymous users (NOT `linkIdentity` — that's OAuth-only) or `signInWithOtp` on returning visitors. The `updateUser` path sends a confirmation email; clicking the link preserves `user.id` and flips `is_anonymous` to false.
+- [x] Magic link redirects back to `/` and shows a "signed in as foo@bar.com" indicator
+- [x] Empty-hub CTA: "Played before? Sign in to find your pools across devices." — shown when user is anonymous on landing
+- [x] Cross-device flow: visiting `/` on a new device with no anonymous session → landing page → "Sign in" → magic link → hub populated from `user_pools` for the now-claimed user
+- [x] Sign-out button in a small profile menu in the hub header
 
 **Edge cases to handle**
 
-- [ ] User claims account on device A, then visits on device B (which has its own unclaimed anonymous session). Signing in with the same email should either merge B's anonymous data into A's account, or prompt the user to choose. **Decide based on spike findings.** Worst case: B's anonymous data is discarded and the user keeps A's history — acceptable.
-- [ ] User signs out and then signs back in anonymously — they get a fresh anonymous user, not their previous one. Document this; no recovery without claiming.
+- [x] User claims account on device A, then visits on device B (which has its own unclaimed anonymous session). Signing in with the same email: B's anonymous data is discarded, A's history is recovered. `updateUser` error triggers an OTP fallback offer in the modal.
+- [x] User signs out and then signs back in anonymously — they get a fresh anonymous user, not their previous one. Document this; no recovery without claiming.
 
 **Acceptance criteria**
 

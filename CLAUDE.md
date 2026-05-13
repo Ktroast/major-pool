@@ -46,6 +46,16 @@ No `npm install` needed — uses Node's built-in `node:test`. Scoring/matching t
 - `lastPin` fallback in `boot()` fires only for users at `/` with 0 `user_pools` rows — i.e. iOS PWA users with old home-screen icons not yet reflected in the DB. The fallback loads the last pool directly. Once `migrateLegacyLocalStorage()` runs, this path is effectively dead for returning users.
 - `migrateLegacyLocalStorage()` runs in `boot()` after auth, before routing. Iterates `major_pool_commish_keys_v1`, verifies each key against `pools.commissioner_key`, upserts a commissioner row via `recordPoolVisit()`. Also migrates `lastPin` as a player row. Clears commish keys only if all upserts succeeded (preserves them for retry on network error). **Does not clear `lastPin`** — still needed for iOS PWA path-strip fallback.
 
+**Account claiming (phase 3):**
+- Anonymous vs claimed state is determined by `currentUser.is_anonymous`. Claimed users have `is_anonymous: false` and `currentUser.email` set.
+- **Unified sign-in flow** (`handleSignIn`): the user always sees one intent — "Sign in to find your pools." Internally: if the anonymous user already has `user_pools` rows, `updateUser({ email })` is tried first so those rows survive the claim (`user.id` is preserved through the transition, verified in the May 11 spike). On any error it silently falls through to `signInWithOtp({ email })`. Users with no pools, or already-claimed users, go straight to OTP. The branching is invisible to the user.
+- **Do NOT use `linkIdentity`** — it is OAuth-only in Supabase JS v2. `updateUser({ email })` is the correct API for adding email to an anonymous user.
+- **Orphaned-anonymous-data policy**: when a user signs in on a new device with an email already claimed elsewhere, `updateUser` fails and the silent OTP fallback sends a magic link for the claimed account. After clicking it, the current device's anonymous session data is discarded and the claimed account's history is recovered. This is intentional per PLAN_AUTH.md.
+- **Role stickiness through claim**: because `user.id` is preserved across the anonymous-to-claimed transition, every `user_pools` row the user held as anonymous remains theirs after claiming — including commissioner rows. The phase 1b role-stickiness invariant requires no special handling here.
+- **`onAuthStateChange` toast logic**: fires on `USER_UPDATED` (claim confirmation redirect) or `SIGNED_IN` (OTP magic-link redirect) when `!currentUser.is_anonymous`. Excludes `INITIAL_SESSION` so returning claimed users don't see the toast on every page load.
+- **Email template (production Supabase config)**: Authentication → Email Templates → "Change Email Address" in the Supabase dashboard. The default copy says "Change Email" which is misleading for first-time claimers (they're not changing anything — they're saving their anonymous session). The customized subject "Save your pools to this email" and matching body copy are load-bearing for the UX — don't let them revert to the Supabase default.
+- **Sign-out**: `supabase.auth.signOut()` + `window.location.reload()`. On reload a fresh anonymous session starts; previous claimed history is recoverable only by signing back in with the same email.
+
 **URL routing is path-based: `/pin/{pin}`.** Shareable links look like `https://putalittledrawonit.netlify.app/pin/ABC123`. The old `?pin=ABC123` query-string format is deprecated — boot() detects it and redirects to the path form so old links still work. Netlify serves `/pin/*` via a 200 rewrite to `index.html`. A `lastPin` key in localStorage provides a fallback for iOS home screen launches (Safari can strip the path on PWA launch from the home screen). Users with the old `?pin=` home screen icon should re-add it once with the new `/pin/{pin}` URL to get reliable path-based launch.
 
 ## Migration notes (2026-05-10)
@@ -64,4 +74,4 @@ Friends with old `?pin=` bookmarks are auto-redirected client-side. Home screen 
 
 ## What's still open (from PROGRESS.md)
 
-- Auth migration phases 2–5 — see PLAN_AUTH.md
+- Auth migration phases 2, 4, 5 — see PLAN_AUTH.md (phase 3 is complete; phase 2 was intentionally skipped)

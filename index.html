@@ -113,15 +113,26 @@
     <div class="section">
       <div class="landing">
         <h2 style="font-family: 'Fraunces', serif; font-style: italic; font-size: 32px; margin-bottom: 14px;">Welcome to the clubhouse.</h2>
-        <p class="muted" style="max-width: 480px; margin: 0 auto;">Start a new pool for this week's major, or enter a PIN to join one your friend started.</p>
-        <div class="landing-actions">
-          <button class="btn btn-big" id="start-pool-btn">Start a New Pool</button>
+        <p class="muted" style="max-width: 480px; margin: 0 auto;">A pool for the gentleman's wager.</p>
+        <div id="hub-empty-signin-caption" class="landing-signin-section" style="display:none;">
+          <h3 class="landing-section-heading">Already played?</h3>
+          <p class="muted" style="font-size:13px; margin-bottom:0;">Sign in with your email to find your pools across devices.</p>
+          <div class="landing-actions">
+            <button class="btn btn-big" id="landing-signin-btn">Sign in to find my pools</button>
+          </div>
+          <div class="landing-divider">or</div>
         </div>
-        <div class="landing-divider">or</div>
-        <div class="join-form">
-          <div class="field-label">Enter Pool PIN</div>
-          <input type="text" id="join-pin-input" placeholder="— — — —" maxlength="6" autocomplete="off" autocapitalize="characters">
-          <button class="btn btn-secondary mt-16" id="join-pool-btn" style="width:100%">Join Pool</button>
+        <div style="margin-top:28px;">
+          <h3 class="landing-section-heading">First time here?</h3>
+          <div class="landing-actions">
+            <button class="btn btn-secondary" id="start-pool-btn">Start a New Pool</button>
+          </div>
+          <div class="landing-divider">or</div>
+          <div class="join-form">
+            <div class="field-label">Enter Pool PIN</div>
+            <input type="text" id="join-pin-input" placeholder="— — — —" maxlength="6" autocomplete="off" autocapitalize="characters">
+            <button class="btn btn-secondary mt-16" id="join-pool-btn" style="width:100%">Join Pool</button>
+          </div>
         </div>
       </div>
     </div>
@@ -135,7 +146,8 @@
           <div class="section-kicker">Your Pools</div>
           <div class="section-title">Pools you've joined or created</div>
         </div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+          <div id="hub-auth-ui"></div>
           <button class="btn btn-secondary btn-small" id="hub-add-pool-btn">Add a pool</button>
           <button class="btn btn-small" id="hub-new-pool-btn">Start a new pool</button>
         </div>
@@ -787,6 +799,7 @@ function setPinInUrl(pin) {
 // RENDER: MASTHEAD + CONNECTION
 // ===================================================================
 function renderMasthead() {
+  renderSignInCaption();
   const el = document.getElementById('masthead-sub');
   if (!pool) { el.innerHTML = '<span>A pool for the golf gentleman</span>'; return; }
   const pot = entries.length * (pool.fee || 0);
@@ -796,6 +809,131 @@ function renderMasthead() {
     <span>${entries.length} entries</span>
     <span>$${pot} pot</span>
   `;
+}
+
+// ===================================================================
+// RENDER: HUB AUTH UI + SIGN-IN CAPTION
+// ===================================================================
+function renderHubAuthUI() {
+  const el = document.getElementById('hub-auth-ui');
+  if (!el) return;
+  if (!currentUser) { el.innerHTML = ''; return; }
+  if (currentUser.is_anonymous) {
+    el.innerHTML = `<button class="hub-signin-link" id="hub-signin-btn">Sign in</button>`;
+    document.getElementById('hub-signin-btn').addEventListener('click', showSignInModal);
+  } else {
+    const email = currentUser.email || '';
+    const display = email.length > 26 ? email.slice(0, 23) + '…' : email;
+    el.innerHTML = `
+      <div class="hub-profile-wrap">
+        <button class="hub-profile-chip" id="hub-profile-chip">${escapeHtml(display)}</button>
+        <div class="hub-profile-menu hidden" id="hub-profile-menu">
+          <div class="hub-profile-menu-email">${escapeHtml(email)}</div>
+          <button class="hub-profile-menu-item" id="hub-signout-btn">Sign out</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('hub-profile-chip').addEventListener('click', e => {
+      e.stopPropagation();
+      document.getElementById('hub-profile-menu').classList.toggle('hidden');
+    });
+    document.getElementById('hub-signout-btn').addEventListener('click', async () => {
+      await sb.auth.signOut();
+      window.location.reload();
+    });
+  }
+}
+
+function renderSignInCaption() {
+  const el = document.getElementById('hub-empty-signin-caption');
+  if (!el) return;
+  el.style.display = currentUser?.is_anonymous ? '' : 'none';
+}
+
+// ===================================================================
+// SIGN-IN MODAL
+// ===================================================================
+function showSignInModal() {
+  showModal(`
+    <h3>Sign in to find your pools</h3>
+    <label class="field" style="margin-top:18px;">
+      <span class="field-label">Email</span>
+      <input type="email" id="signin-email" placeholder="you@example.com" autocomplete="email">
+    </label>
+    <p id="signin-validation" style="font-size:12px;color:var(--claret);min-height:18px;margin-top:-8px;margin-bottom:10px;"></p>
+    <button class="btn" style="width:100%" id="signin-submit">Send magic link</button>
+    <div id="signin-status" style="margin-top:16px;font-size:13px;line-height:1.5;"></div>
+  `);
+  document.getElementById('signin-submit').addEventListener('click', handleSignIn);
+  document.getElementById('signin-email').addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleSignIn();
+  });
+  setTimeout(() => document.getElementById('signin-email')?.focus(), 60);
+}
+
+async function handleSignIn() {
+  const emailEl = document.getElementById('signin-email');
+  const statusEl = document.getElementById('signin-status');
+  const validationEl = document.getElementById('signin-validation');
+  const submitBtn = document.getElementById('signin-submit');
+  if (!emailEl || !statusEl) return;
+
+  const email = emailEl.value.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (validationEl) validationEl.textContent = 'Please enter a valid email address.';
+    return;
+  }
+  if (validationEl) validationEl.textContent = '';
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Sending…';
+  statusEl.textContent = '';
+
+  let success = false;
+  let lastError = null;
+
+  // If this anonymous user already has pools, try upgrading their session in place
+  // so their user_pools rows carry over. updateUser() preserves user.id through the
+  // confirmation step (verified in the May 11 spike). If it fails for any reason
+  // (email collision, network, etc.) we fall through to OTP silently — the user
+  // never sees the distinction.
+  if (currentUser?.is_anonymous) {
+    const userId = getCurrentUserId();
+    const { data: existingPools, error: poolsErr } = await sb
+      .from('user_pools').select('pool_id').eq('user_id', userId).limit(1);
+    if (!poolsErr && existingPools?.length > 0) {
+      const { error: updateErr } = await sb.auth.updateUser({ email });
+      if (!updateErr) success = true;
+      else lastError = updateErr;
+    }
+  }
+
+  if (!success) {
+    const { error: otpErr } = await sb.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin + '/' }
+    });
+    if (!otpErr) success = true;
+    else lastError = otpErr;
+  }
+
+  submitBtn.disabled = false;
+  submitBtn.textContent = 'Send magic link';
+
+  if (success) {
+    document.getElementById('modal-content').innerHTML = `
+      <h3>Check your email</h3>
+      <p style="margin-bottom:16px;font-size:14px;line-height:1.6;">We sent a sign-in link to <strong>${escapeHtml(email)}</strong>. Click it and your pools will be waiting for you here.</p>
+      <p style="margin-bottom:24px;font-size:13px;color:var(--ink-soft);">Check your spam or junk folder if it doesn't arrive.</p>
+      <button class="btn btn-secondary" style="width:100%" id="modal-close-btn">Close</button>
+    `;
+    document.getElementById('modal-close-btn').addEventListener('click', hideModal);
+  } else {
+    const isRateLimit = lastError?.status === 429 || /rate|429/i.test(lastError?.message || '');
+    statusEl.textContent = isRateLimit
+      ? 'Too many sign-in attempts. Please wait a few minutes and try again.'
+      : 'Couldn\'t send your sign-in link. Please try again.';
+  }
 }
 
 // ===================================================================
@@ -1348,6 +1486,7 @@ function formatHubDate(isoStr) {
 async function showHub() {
   showView('hub');
   renderMasthead();
+  renderHubAuthUI();
   const list = document.getElementById('hub-pool-list');
   list.innerHTML = '<div class="muted" style="padding: 22px;">Loading your pools…</div>';
   const userId = getCurrentUserId();
@@ -1610,6 +1749,8 @@ document.getElementById('start-pool-btn').addEventListener('click', () => {
   });
 });
 
+document.getElementById('landing-signin-btn').addEventListener('click', showSignInModal);
+
 document.getElementById('join-pool-btn').addEventListener('click', async () => {
   const pin = document.getElementById('join-pin-input').value.trim().toUpperCase();
   if (!pin) { toast('Enter a PIN.', true); return; }
@@ -1621,6 +1762,11 @@ document.getElementById('join-pin-input').addEventListener('keydown', e => {
 
 document.getElementById('hub-new-pool-btn').addEventListener('click', () => {
   document.getElementById('start-pool-btn').click();
+});
+
+document.addEventListener('click', () => {
+  const menu = document.getElementById('hub-profile-menu');
+  if (menu) menu.classList.add('hidden');
 });
 
 document.getElementById('hub-add-pool-btn').addEventListener('click', () => {
@@ -1959,8 +2105,18 @@ async function migrateLegacyLocalStorage() {
 // ===================================================================
 async function boot() {
   // --- Auth session bootstrap ---
-  sb.auth.onAuthStateChange((_event, session) => {
+  sb.auth.onAuthStateChange((event, session) => {
     currentUser = session?.user ?? null;
+    // Detect anonymous → claimed transition. USER_UPDATED fires when an
+    // anonymous user confirms their email via updateUser(); SIGNED_IN fires
+    // when a claimed user signs in via OTP on a new device. Neither fires
+    // on INITIAL_SESSION (page load with existing session), so returning
+    // claimed users don't see the toast on every load.
+    if ((event === 'USER_UPDATED' || event === 'SIGNED_IN') && currentUser && !currentUser.is_anonymous) {
+      toast(`Signed in as ${currentUser.email}. Your pools are saved to this email.`);
+      renderHubAuthUI();
+      if (document.getElementById('view-hub').classList.contains('active')) showHub();
+    }
   });
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
