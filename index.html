@@ -215,6 +215,7 @@
         <div class="section-header"><div><div class="section-kicker">Submit Your Picks</div><div class="section-title" id="my-picks-title">New entry</div></div></div>
         <div class="section-body">
           <div id="pick-golfers-missing" class="banner banner-warn hidden">Commissioner hasn't loaded the golfer field yet. Check back soon.</div>
+          <div id="pick-locked-banner" class="banner banner-info hidden">This pool is locked. The commissioner has closed entries — picks can no longer be created or edited.</div>
           <div id="pick-form">
             <label class="field">
               <span class="field-label">Your Name</span>
@@ -303,10 +304,12 @@
             <span class="field-label">— or Paste List (rank by line order) —</span>
             <textarea id="golfer-paste" placeholder="Ben Griffin & Andrew Novak&#10;Marco Penge & Matt Wallace&#10;Aaron Rai & Sahith Theegala&#10;..."></textarea>
           </label>
+          <div id="lock-status-line" class="muted hidden" style="margin-top: 14px; font-size: 12px; text-align: right;"></div>
           <div class="flex-between mt-16">
             <button class="btn" id="save-field-btn">Load Golfer Field</button>
             <div>
               <button class="btn btn-secondary btn-small" id="backup-key-btn">Show Commissioner Key</button>
+              <button class="btn btn-secondary btn-small" id="lock-pool-btn">Lock Pool</button>
               <button class="btn btn-danger btn-small" id="delete-pool-btn">Delete Pool</button>
             </div>
           </div>
@@ -701,6 +704,15 @@ async function updatePool(poolId, patch) {
   return data;
 }
 async function upsertEntry(poolId, entry) {
+  // Defense in depth — the real boundary is the entries RLS policy, which
+  // blocks the write server-side when locked_at is non-null and the caller
+  // isn't the commissioner. Throwing here gives any caller (today: the save-
+  // entry button; tomorrow: anything else) a clean error before the network
+  // round-trip. The save-entry click handler also short-circuits earlier so
+  // the user sees a friendly toast rather than "Submit failed: ...".
+  if (pool?.locked_at && !isCommissioner) {
+    throw new Error('Pool is locked. Contact the commissioner.');
+  }
   if (entry.id) {
     const { data, error } = await sb.from('entries').update({
       name: entry.name, picks: entry.picks, tiebreaker: entry.tiebreaker
@@ -1327,7 +1339,8 @@ function renderEntriesList() {
   wrap.innerHTML = '';
   entries.forEach(e => {
     const picksStr = e.picks.map(r => { const g = golferByRank(r, pool); return g ? `${r}. ${g.name}` : `#${r} (unknown)`; }).join(' · ');
-    const canEdit = isCommissioner || e.name.toLowerCase() === getLastName().toLowerCase();
+    const lockedForUser = pool.locked_at && !isCommissioner;
+    const canEdit = !lockedForUser && (isCommissioner || e.name.toLowerCase() === getLastName().toLowerCase());
 
     const row = document.createElement('div');
     row.className = 'entry-row';
@@ -1365,13 +1378,27 @@ function renderEntriesList() {
 function renderPickForm() {
   const grid = document.getElementById('tier-grid');
   const missing = document.getElementById('pick-golfers-missing');
+  const lockedBanner = document.getElementById('pick-locked-banner');
+  const form = document.getElementById('pick-form');
+
+  // Lock takes precedence over the missing-field state — if the commissioner
+  // locked the pool before loading golfers, non-commissioners should see the
+  // lock banner, not a confusing "field not loaded" message.
+  if (pool.locked_at && !isCommissioner) {
+    lockedBanner.classList.remove('hidden');
+    missing.classList.add('hidden');
+    form.classList.add('hidden');
+    return;
+  }
+  lockedBanner.classList.add('hidden');
+
   if (!pool.golfers || pool.golfers.length === 0) {
     missing.classList.remove('hidden');
-    document.getElementById('pick-form').classList.add('hidden');
+    form.classList.add('hidden');
     return;
   }
   missing.classList.add('hidden');
-  document.getElementById('pick-form').classList.remove('hidden');
+  form.classList.remove('hidden');
 
   grid.innerHTML = '';
   const editingEntry = editingEntryId ? entries.find(e => e.id === editingEntryId) : null;
@@ -1500,6 +1527,19 @@ function renderSetup() {
 
   // Tournament date key (YYYYMMDD) — empty means auto-pull current live tournament
   document.getElementById('tespn').value = pool.espn_event_id || '';
+
+  // Lock toggle (phase 3.2)
+  const lockBtn = document.getElementById('lock-pool-btn');
+  const lockLine = document.getElementById('lock-status-line');
+  if (pool.locked_at) {
+    lockBtn.textContent = 'Unlock Pool';
+    lockLine.textContent = `Locked ${new Date(pool.locked_at).toLocaleString()} — entries closed`;
+    lockLine.classList.remove('hidden');
+  } else {
+    lockBtn.textContent = 'Lock Pool';
+    lockLine.textContent = '';
+    lockLine.classList.add('hidden');
+  }
 }
 
 // ===================================================================
@@ -2000,6 +2040,9 @@ document.getElementById('save-field-btn').addEventListener('click', async () => 
 });
 
 document.getElementById('save-entry-btn').addEventListener('click', async () => {
+  if (pool.locked_at && !isCommissioner) {
+    return toast('Pool is locked. Contact the commissioner.', true);
+  }
   const name = document.getElementById('entry-name').value.trim();
   const tb = document.getElementById('entry-tb').value;
   const selects = document.querySelectorAll('#tier-grid select');
@@ -2108,6 +2151,32 @@ document.getElementById('backup-key-btn').addEventListener('click', () => {
   `);
   document.getElementById('copy-key-btn').addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(pool.commissioner_key); toast('Key copied.'); } catch { toast('Copy failed.', true); }
+  });
+});
+
+document.getElementById('lock-pool-btn').addEventListener('click', () => {
+  const isLocked = !!pool.locked_at;
+  const title = isLocked ? 'Unlock this pool?' : 'Lock this pool?';
+  const body = isLocked
+    ? 'Unlocking lets entries be created and edited again.'
+    : 'Locking the pool prevents anyone but you from creating or editing entries. You can unlock it again at any time.';
+  const action = isLocked ? 'Unlock Pool' : 'Lock Pool';
+  showModal(`
+    <h3>${title}</h3>
+    <p style="margin-bottom: 20px; font-size: 14px; line-height: 1.6;">${body}</p>
+    <div style="display:flex; gap: 8px; justify-content: flex-end;">
+      <button class="btn btn-secondary" onclick="hideModal()">Cancel</button>
+      <button class="btn" id="lock-confirm-btn">${action}</button>
+    </div>
+  `);
+  document.getElementById('lock-confirm-btn').addEventListener('click', async () => {
+    const next = isLocked ? null : new Date().toISOString();
+    try {
+      pool = await updatePool(pool.id, { locked_at: next });
+      hideModal();
+      renderAll();
+      toast(isLocked ? 'Pool unlocked.' : 'Pool locked.');
+    } catch (e) { toast((isLocked ? 'Unlock' : 'Lock') + ' failed: ' + e.message, true); }
   });
 });
 
