@@ -871,6 +871,38 @@ function showSignInModal() {
   setTimeout(() => document.getElementById('signin-email')?.focus(), 60);
 }
 
+// Core sign-in / claim logic shared between the hub sign-in modal and the
+// post-submit claim modal. Tries updateUser() first for anonymous users with
+// existing pools (preserves user.id through confirmation), then falls back to
+// OTP silently. Returns { success, lastError }.
+async function sendSignInLink(email) {
+  let success = false;
+  let lastError = null;
+  // If this anonymous user already has pools, try upgrading their session in place
+  // so their user_pools rows carry over. updateUser() preserves user.id through the
+  // confirmation step (verified in the May 11 spike). If it fails for any reason
+  // (email collision, network, etc.) we fall through to OTP silently.
+  if (currentUser?.is_anonymous) {
+    const userId = getCurrentUserId();
+    const { data: existingPools, error: poolsErr } = await sb
+      .from('user_pools').select('pool_id').eq('user_id', userId).limit(1);
+    if (!poolsErr && existingPools?.length > 0) {
+      const { error: updateErr } = await sb.auth.updateUser({ email });
+      if (!updateErr) success = true;
+      else lastError = updateErr;
+    }
+  }
+  if (!success) {
+    const { error: otpErr } = await sb.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin + '/' }
+    });
+    if (!otpErr) success = true;
+    else lastError = otpErr;
+  }
+  return { success, lastError };
+}
+
 async function handleSignIn() {
   const emailEl = document.getElementById('signin-email');
   const statusEl = document.getElementById('signin-status');
@@ -889,33 +921,7 @@ async function handleSignIn() {
   submitBtn.textContent = 'Sending…';
   statusEl.textContent = '';
 
-  let success = false;
-  let lastError = null;
-
-  // If this anonymous user already has pools, try upgrading their session in place
-  // so their user_pools rows carry over. updateUser() preserves user.id through the
-  // confirmation step (verified in the May 11 spike). If it fails for any reason
-  // (email collision, network, etc.) we fall through to OTP silently — the user
-  // never sees the distinction.
-  if (currentUser?.is_anonymous) {
-    const userId = getCurrentUserId();
-    const { data: existingPools, error: poolsErr } = await sb
-      .from('user_pools').select('pool_id').eq('user_id', userId).limit(1);
-    if (!poolsErr && existingPools?.length > 0) {
-      const { error: updateErr } = await sb.auth.updateUser({ email });
-      if (!updateErr) success = true;
-      else lastError = updateErr;
-    }
-  }
-
-  if (!success) {
-    const { error: otpErr } = await sb.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin + '/' }
-    });
-    if (!otpErr) success = true;
-    else lastError = otpErr;
-  }
+  const { success, lastError } = await sendSignInLink(email);
 
   submitBtn.disabled = false;
   submitBtn.textContent = 'Send magic link';
@@ -924,7 +930,8 @@ async function handleSignIn() {
     document.getElementById('modal-content').innerHTML = `
       <h3>Check your email</h3>
       <p style="margin-bottom:16px;font-size:14px;line-height:1.6;">We sent a sign-in link to <strong>${escapeHtml(email)}</strong>. Click it and your pools will be waiting for you here.</p>
-      <p style="margin-bottom:24px;font-size:13px;color:var(--ink-soft);">Check your spam or junk folder if it doesn't arrive.</p>
+      <p style="margin-bottom:12px;font-size:13px;color:var(--ink-soft);">Check your spam or junk folder if it doesn't arrive.</p>
+      <p style="margin-bottom:24px;font-size:13px;color:var(--ink-soft);">If the link looks expired when you click it, copy and paste it into your browser instead — some email apps preview links in a way that uses them up.</p>
       <button class="btn btn-secondary" style="width:100%" id="modal-close-btn">Close</button>
     `;
     document.getElementById('modal-close-btn').addEventListener('click', hideModal);
@@ -933,6 +940,72 @@ async function handleSignIn() {
     statusEl.textContent = isRateLimit
       ? 'Too many sign-in attempts. Please wait a few minutes and try again.'
       : 'Couldn\'t send your sign-in link. Please try again.';
+  }
+}
+
+// ===================================================================
+// POST-SUBMIT CLAIM MODAL (phase 3.1a)
+// ===================================================================
+// Shown after a successful entry save when the user is still anonymous.
+// The entry is already persisted — this modal is purely a nudge, never a gate.
+function showPostSubmitClaimModal() {
+  showModal(`
+    <h3>Save your entry across devices</h3>
+    <p style="margin-bottom:16px;font-size:14px;line-height:1.6;">Your picks are saved on this device. Add your email so you can access this entry from your phone, laptop, or if you clear your browser data.</p>
+    <label class="field">
+      <span class="field-label">Email</span>
+      <input type="email" id="claim-email" placeholder="you@example.com" autocomplete="email">
+    </label>
+    <p id="claim-validation" style="font-size:12px;color:var(--claret);min-height:18px;margin-top:-8px;margin-bottom:10px;"></p>
+    <button class="btn" style="width:100%;margin-bottom:10px;" id="claim-submit">Save my entry</button>
+    <button class="btn btn-secondary" style="width:100%" id="claim-dismiss">Not now</button>
+    <div id="claim-status" style="margin-top:16px;font-size:13px;line-height:1.5;"></div>
+  `);
+  document.getElementById('claim-dismiss').addEventListener('click', hideModal);
+  document.getElementById('claim-submit').addEventListener('click', handlePostSubmitClaim);
+  document.getElementById('claim-email').addEventListener('keydown', e => {
+    if (e.key === 'Enter') handlePostSubmitClaim();
+  });
+  setTimeout(() => document.getElementById('claim-email')?.focus(), 60);
+}
+
+async function handlePostSubmitClaim() {
+  const emailEl = document.getElementById('claim-email');
+  const statusEl = document.getElementById('claim-status');
+  const validationEl = document.getElementById('claim-validation');
+  const submitBtn = document.getElementById('claim-submit');
+  if (!emailEl || !statusEl) return;
+
+  const email = emailEl.value.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (validationEl) validationEl.textContent = 'Please enter a valid email address.';
+    return;
+  }
+  if (validationEl) validationEl.textContent = '';
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Sending…';
+  statusEl.textContent = '';
+
+  const { success, lastError } = await sendSignInLink(email);
+
+  submitBtn.disabled = false;
+  submitBtn.textContent = 'Save my entry';
+
+  if (success) {
+    document.getElementById('modal-content').innerHTML = `
+      <h3>Check your email</h3>
+      <p style="margin-bottom:16px;font-size:14px;line-height:1.6;">We sent a confirmation link to <strong>${escapeHtml(email)}</strong>. Click it to save your picks to this email.</p>
+      <p style="margin-bottom:12px;font-size:13px;color:var(--ink-soft);">Check your spam or junk folder if it doesn't arrive.</p>
+      <p style="margin-bottom:24px;font-size:13px;color:var(--ink-soft);">If the link looks expired when you click it, copy and paste it into your browser instead — some email apps preview links in a way that uses them up.</p>
+      <button class="btn btn-secondary" style="width:100%" id="modal-close-btn">Close</button>
+    `;
+    document.getElementById('modal-close-btn').addEventListener('click', hideModal);
+  } else {
+    const isRateLimit = lastError?.status === 429 || /rate|429/i.test(lastError?.message || '');
+    statusEl.textContent = isRateLimit
+      ? 'Too many sign-in attempts. Please wait a few minutes and try again.'
+      : 'Couldn\'t send the link. Please try again.';
   }
 }
 
@@ -1950,6 +2023,12 @@ document.getElementById('save-entry-btn').addEventListener('click', async () => 
     entries = await fetchEntries(pool.id);
     renderAll();
     showTab('leaderboard');
+    // Nudge anonymous users to attach an email — entry is already saved, this is
+    // non-blocking. Skip if any modal is already open (e.g. sign-in modal).
+    if (currentUser?.is_anonymous && !currentUser?.email &&
+        !document.getElementById('modal-bg').classList.contains('active')) {
+      showPostSubmitClaimModal();
+    }
   } catch (e) { toast('Submit failed: ' + e.message, true); }
 });
 
