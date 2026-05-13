@@ -32,8 +32,19 @@ CREATE TABLE pools (
     golfers          jsonb       DEFAULT '[]',
     score_overrides  jsonb       DEFAULT '{}',
     espn_event_id    text,
-    updated_at       timestamptz
+    updated_at       timestamptz,
+    locked_at        timestamptz                                  -- phase 3.2: non-null = entries closed
 );
+
+-- locked_at (added phase 3.2 — commissioner pool locking)
+--   NULL              -> pool is open; anyone with the PIN may create/edit entries
+--   timestamptz value -> pool is locked; only the pool's commissioner may write entries
+-- Toggled by the commissioner from the Setup tab. RLS enforcement on entries
+-- below; client-side guard in upsertEntry() is a UX nicety, not a security boundary.
+--
+-- Apply to existing Supabase project:
+--   ALTER TABLE pools ADD COLUMN locked_at timestamptz;
+-- (No backfill needed — existing pools default to NULL = unlocked.)
 
 -- golfers shape (array):
 --   [{name, rank, rounds: [r1|null, r2|null, r3|null, r4|null],
@@ -62,6 +73,79 @@ CREATE TABLE entries (
 --   [rank1, rank2, rank3, rank4, rank5]
 --   Each value is the OWGR rank of the selected golfer (integer).
 --   Tiers: 1–10, 11–20, 21–30, 31–40, 41+.
+
+-- RLS for entries (added phase 3.2 — commissioner pool locking)
+-- ------------------------------------------------------------------
+-- The lock check is enforced server-side: writes are blocked when the
+-- parent pool's locked_at is non-null, except for the pool's commissioner
+-- (identified by a row in user_pools with role='commissioner').
+--
+-- These policies replace any prior INSERT/UPDATE policies on entries.
+-- SELECT and DELETE remain unrestricted (anyone with the PIN can read;
+-- the commissioner's delete-entry button is the only DELETE caller).
+-- The policies only cover INSERT and UPDATE — those are the actions
+-- the lock prevents.
+--
+-- Apply to Supabase dashboard (SQL editor):
+--
+--   ALTER TABLE entries ENABLE ROW LEVEL SECURITY;
+--
+--   -- If permissive read/delete policies don't already exist, create them
+--   -- so enabling RLS doesn't break existing flows:
+--   DROP POLICY IF EXISTS "entries_read_all"   ON entries;
+--   DROP POLICY IF EXISTS "entries_delete_all" ON entries;
+--   CREATE POLICY "entries_read_all"   ON entries FOR SELECT USING (true);
+--   CREATE POLICY "entries_delete_all" ON entries FOR DELETE USING (true);
+--
+--   -- The lock-aware INSERT / UPDATE policies:
+--   DROP POLICY IF EXISTS "entries_insert_when_unlocked_or_commissioner" ON entries;
+--   DROP POLICY IF EXISTS "entries_update_when_unlocked_or_commissioner" ON entries;
+--
+--   CREATE POLICY "entries_insert_when_unlocked_or_commissioner"
+--     ON entries FOR INSERT
+--     WITH CHECK (
+--       EXISTS (
+--         SELECT 1 FROM pools p
+--         WHERE p.id = entries.pool_id
+--           AND (
+--             p.locked_at IS NULL
+--             OR EXISTS (
+--               SELECT 1 FROM user_pools up
+--               WHERE up.pool_id = p.id
+--                 AND up.user_id = auth.uid()
+--                 AND up.role = 'commissioner'
+--             )
+--           )
+--       )
+--     );
+--
+--   CREATE POLICY "entries_update_when_unlocked_or_commissioner"
+--     ON entries FOR UPDATE
+--     USING (
+--       EXISTS (
+--         SELECT 1 FROM pools p
+--         WHERE p.id = entries.pool_id
+--           AND (
+--             p.locked_at IS NULL
+--             OR EXISTS (
+--               SELECT 1 FROM user_pools up
+--               WHERE up.pool_id = p.id
+--                 AND up.user_id = auth.uid()
+--                 AND up.role = 'commissioner'
+--             )
+--           )
+--       )
+--     );
+--
+-- Verification (run from a non-commissioner anonymous browser session, after
+-- locking the pool from another session):
+--
+--   await sb.from('entries').insert({
+--     pool_id: '<pool-uuid>', name: 'rls-test', picks: [1,2,3,4,5], tiebreaker: -10
+--   }).then(r => console.log('write result:', r));
+--
+-- Expect: { error: { code: '42501' or 'new row violates row-level security policy' } }.
+-- A successful insert means the policy isn't applied — fix before shipping.
 
 -- ---------------------------------------------------------------------------
 -- user_pools  (added phase 1a — anonymous auth foundation)
