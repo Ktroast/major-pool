@@ -864,30 +864,30 @@ function showSignInModal() {
     <button class="btn" style="width:100%" id="signin-submit">Send magic link</button>
     <div id="signin-status" style="margin-top:16px;font-size:13px;line-height:1.5;"></div>
   `);
-  document.getElementById(‘signin-submit’).addEventListener(‘click’, handleSignIn);
-  document.getElementById(‘signin-email’).addEventListener(‘keydown’, e => {
-    if (e.key === ‘Enter’) handleSignIn();
+  document.getElementById('signin-submit').addEventListener('click', handleSignIn);
+  document.getElementById('signin-email').addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleSignIn();
   });
-  setTimeout(() => document.getElementById(‘signin-email’)?.focus(), 60);
+  setTimeout(() => document.getElementById('signin-email')?.focus(), 60);
 }
 
 async function handleSignIn() {
-  const emailEl = document.getElementById(‘signin-email’);
-  const statusEl = document.getElementById(‘signin-status’);
-  const validationEl = document.getElementById(‘signin-validation’);
-  const submitBtn = document.getElementById(‘signin-submit’);
+  const emailEl = document.getElementById('signin-email');
+  const statusEl = document.getElementById('signin-status');
+  const validationEl = document.getElementById('signin-validation');
+  const submitBtn = document.getElementById('signin-submit');
   if (!emailEl || !statusEl) return;
 
   const email = emailEl.value.trim();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    if (validationEl) validationEl.textContent = ‘Please enter a valid email address.’;
+    if (validationEl) validationEl.textContent = 'Please enter a valid email address.';
     return;
   }
-  if (validationEl) validationEl.textContent = ‘’;
+  if (validationEl) validationEl.textContent = '';
 
   submitBtn.disabled = true;
-  submitBtn.textContent = ‘Sending…’;
-  statusEl.textContent = ‘’;
+  submitBtn.textContent = 'Sending…';
+  statusEl.textContent = '';
 
   let success = false;
   let lastError = null;
@@ -900,7 +900,7 @@ async function handleSignIn() {
   if (currentUser?.is_anonymous) {
     const userId = getCurrentUserId();
     const { data: existingPools, error: poolsErr } = await sb
-      .from(‘user_pools’).select(‘pool_id’).eq(‘user_id’, userId).limit(1);
+      .from('user_pools').select('pool_id').eq('user_id', userId).limit(1);
     if (!poolsErr && existingPools?.length > 0) {
       const { error: updateErr } = await sb.auth.updateUser({ email });
       if (!updateErr) success = true;
@@ -911,28 +911,28 @@ async function handleSignIn() {
   if (!success) {
     const { error: otpErr } = await sb.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: window.location.origin + ‘/’ }
+      options: { emailRedirectTo: window.location.origin + '/' }
     });
     if (!otpErr) success = true;
     else lastError = otpErr;
   }
 
   submitBtn.disabled = false;
-  submitBtn.textContent = ‘Send magic link’;
+  submitBtn.textContent = 'Send magic link';
 
   if (success) {
-    document.getElementById(‘modal-content’).innerHTML = `
+    document.getElementById('modal-content').innerHTML = `
       <h3>Check your email</h3>
       <p style="margin-bottom:16px;font-size:14px;line-height:1.6;">We sent a sign-in link to <strong>${escapeHtml(email)}</strong>. Click it and your pools will be waiting for you here.</p>
-      <p style="margin-bottom:24px;font-size:13px;color:var(--ink-soft);">Check your spam or junk folder if it doesn’t arrive.</p>
+      <p style="margin-bottom:24px;font-size:13px;color:var(--ink-soft);">Check your spam or junk folder if it doesn't arrive.</p>
       <button class="btn btn-secondary" style="width:100%" id="modal-close-btn">Close</button>
     `;
-    document.getElementById(‘modal-close-btn’).addEventListener(‘click’, hideModal);
+    document.getElementById('modal-close-btn').addEventListener('click', hideModal);
   } else {
-    const isRateLimit = lastError?.status === 429 || /rate|429/i.test(lastError?.message || ‘’);
+    const isRateLimit = lastError?.status === 429 || /rate|429/i.test(lastError?.message || '');
     statusEl.textContent = isRateLimit
-      ? ‘Too many sign-in attempts. Please wait a few minutes and try again.’
-      : ‘Couldn\’t send your sign-in link. Please try again.’;
+      ? 'Too many sign-in attempts. Please wait a few minutes and try again.'
+      : 'Couldn\'t send your sign-in link. Please try again.';
   }
 }
 
