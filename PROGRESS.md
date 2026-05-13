@@ -137,7 +137,7 @@ Merged on branch `phase-3.1a-post-submit-prompt`. Adds a post-submit modal nudgi
 | Item | Commit |
 |------|--------|
 | Extract `sendSignInLink`; add `showPostSubmitClaimModal` + hook into entry save | 2a7bf84 |
-| Docs: phase 3.1a boxes ticked; PROGRESS.md + CLAUDE.md updated | (this commit) |
+| Docs: phase 3.1a boxes ticked; PROGRESS.md + CLAUDE.md updated | 0c36600 |
 
 Acceptance criteria — all passed:
 - [x] Anonymous user creates new entry → modal appears
