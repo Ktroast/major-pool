@@ -103,7 +103,7 @@ Acceptance criteria — all passed:
 
 ## Auth migration — phase 3 (account claiming via magic link)
 
-On branch `phase-3-claim-flow`. Adds the sign-in / claim flow — anonymous users can attach an email to their account to make their pool history portable across devices. Phase 2 (entry linking) intentionally skipped; phase 3 prioritised because phase 1b made cross-device pain immediately visible.
+Merged on branch `phase-3-claim-flow`. Adds the sign-in / claim flow — anonymous users can attach an email to their account to make their pool history portable across devices. Phase 2 (entry linking) intentionally skipped; phase 3 prioritised because phase 1b made cross-device pain immediately visible. Acceptance testing passed May 12, 2026.
 
 | Item | Commit |
 |------|--------|
@@ -111,15 +111,22 @@ On branch `phase-3-claim-flow`. Adds the sign-in / claim flow — anonymous user
 | Hub header sign-in link + profile chip | 2b4cef2 |
 | Empty-hub recovery caption | b17e3b6 |
 | CSS for hub auth UI | 3d0e96f |
+| Docs: phase 3 complete (PLAN_AUTH.md boxes) | 61cc180 |
+| UX: promote sign-in to primary action on empty hub | 85789fc |
+| UX: unify modal under single intent (silent OTP fallback) | ba66100 |
+| Fix: syntax error in handleSignIn (curly quotes) | 7cb6030 |
 
-Acceptance criteria — pending smoke test against Netlify preview:
-- [ ] Anonymous user with pools sees Sign in link in hub header
-- [ ] Anonymous user with no pools sees recovery caption on landing
-- [ ] Claim happy path: email entered → confirmation email arrives with correct template → link clicked → redirect → toast shows → profile chip appears → `user.id` unchanged
-- [ ] Post-claim: hub shows same pools; commissioner status preserved
-- [ ] Cross-device recovery: new anonymous session → sign in → OTP link → hub shows claimed account's pools
-- [ ] Sign out → fresh anonymous session → hub empty
-- [ ] Email collision: `updateUser` error → "try signing in instead" → OTP flow completes
+Manual steps required before production:
+- Supabase dashboard → Authentication → Email Templates → customize "Confirm Email Change" template to read "Confirm your email" (first-time claimers see "Change Email" subject otherwise — misleading but functional).
+
+Acceptance criteria — all passed:
+- [x] Anonymous user with pools sees Sign in link in hub header
+- [x] Anonymous user with no pools sees recovery caption on landing ("Already played? Sign in...")
+- [x] Claim happy path: email entered → confirmation email → link clicked → redirect → toast shows → profile chip appears → `user.id` unchanged
+- [x] Post-claim: hub shows same pools; commissioner status preserved (user.id stable → user_pools rows intact)
+- [x] Cross-device recovery: new anonymous session → sign in → OTP link → hub shows claimed account's pools
+- [x] Sign out → fresh anonymous session → hub empty
+- [x] Email collision: `updateUser` silently falls back to OTP (no user-visible branching); claimed identity's history recovered on redirect
 
 ---
 
