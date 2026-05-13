@@ -57,6 +57,14 @@ No `npm install` needed — uses Node's built-in `node:test`. Scoring/matching t
 - **Sign-out**: `supabase.auth.signOut()` + `window.location.reload()`. On reload a fresh anonymous session starts; previous claimed history is recoverable only by signing back in with the same email.
 - **Post-submit claim prompt (phase 3.1a)**: anonymous users are nudged to attach an email via `showPostSubmitClaimModal()` after every successful entry save. The entry is already persisted — the modal is non-blocking. Reuses `sendSignInLink(email)`, extracted from `handleSignIn` as the shared updateUser/OTP-fallback core. Prompt skipped if the user is already claimed or any modal is already open.
 
+**Pool locking (phase 3.2):**
+- `pools.locked_at timestamptz` — null = unlocked (entries open); non-null = locked (commissioner-only writes).
+- Manual toggle only — no auto-lock, no scheduled jobs. Commissioner clicks Lock/Unlock in the Setup tab; both transitions go through a confirmation modal.
+- **RLS is the security boundary.** The INSERT and UPDATE policies on `entries` allow the write only when the parent pool's `locked_at` is null OR the caller has a `user_pools` row with `role = 'commissioner'` for that pool. Documented in `supabase/schema.sql`. The brief deliberately did NOT pull forward the phase-4 `commissioner_user_id` column — the `user_pools` subquery matches the current data model.
+- The client guard in `upsertEntry` (and the early-return in the save-entry click handler) is a UX nicety, not a security boundary — it surfaces a friendly toast instead of a raw RLS rejection, but a hand-crafted insert from devtools is rejected by the policy regardless.
+- Non-commissioner rendering: `renderPickForm()` swaps the form for an info banner; `renderEntriesList()` hides the per-entry Edit button (entries remain visible read-only). Commissioner Edit and Delete buttons are unaffected.
+- Realtime: `subscribeToChanges()` already listens for `UPDATE` on `pools` and re-renders, so lock/unlock propagates to other open tabs without a hard reload.
+
 **URL routing is path-based: `/pin/{pin}`.** Shareable links look like `https://putalittledrawonit.netlify.app/pin/ABC123`. The old `?pin=ABC123` query-string format is deprecated — boot() detects it and redirects to the path form so old links still work. Netlify serves `/pin/*` via a 200 rewrite to `index.html`. A `lastPin` key in localStorage provides a fallback for iOS home screen launches (Safari can strip the path on PWA launch from the home screen). Users with the old `?pin=` home screen icon should re-add it once with the new `/pin/{pin}` URL to get reliable path-based launch.
 
 ## Migration notes (2026-05-10)
@@ -75,4 +83,4 @@ Friends with old `?pin=` bookmarks are auto-redirected client-side. Home screen 
 
 ## What's still open (from PROGRESS.md)
 
-- Auth migration phases 2, 4, 5 — see PLAN_AUTH.md (phase 3 is complete; phase 2 was intentionally skipped)
+- Auth migration phases 2, 3.1b, 4, 5 — see PLAN_AUTH.md (phases 3 and 3.2 are complete; phase 2 was intentionally skipped earlier)

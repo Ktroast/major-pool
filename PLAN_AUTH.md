@@ -246,32 +246,34 @@ Phase 2 links new entries to `user_id`. But those IDs belong to anonymous users 
 
 Goal: commissioners can lock a pool to prevent new entries and edits after the pick deadline, enforced both in the client and at the database layer.
 
+> Merged on branch `phase-3.2-pool-locking`. Acceptance testing passed May 13, 2026.
+
 **Schema changes**
 
-- [ ] Add `locked_at timestamptz` to `pools` (nullable; null = unlocked)
-- [ ] RLS policy on `entries`: block INSERT and UPDATE when `(SELECT locked_at FROM pools WHERE id = pool_id) IS NOT NULL`, unless the calling user is the pool's commissioner (`commissioner_user_id = auth.uid()` — from phase 4, or fall back to `commissioner_key` check)
-- [ ] Update `supabase/schema.sql`
+- [x] Add `locked_at timestamptz` to `pools` (nullable; null = unlocked)
+- [x] RLS policy on `entries`: block INSERT and UPDATE when the parent pool's `locked_at` is non-null, unless the calling user is the pool's commissioner. Implemented via subquery to `user_pools` (`role = 'commissioner'`) — does not depend on the phase-4 `commissioner_user_id` column, which is intentionally still out of scope.
+- [x] Update `supabase/schema.sql`
 
 **Client changes**
 
-- [ ] `isLocked` helper: `pool.locked_at !== null`
-- [ ] Setup tab: "Lock pool" toggle (commissioner only). Locking writes `locked_at = now()`; unlocking sets `locked_at = null`. Show the lock timestamp when locked ("Locked on May 9 at 12:30 PM")
-- [ ] Entry submit form: hidden for non-commissioners when `isLocked`. Show a "Picks are locked" banner in its place
-- [ ] Entry edit: same gate — edit form hidden for non-commissioners on locked pools
-- [ ] Commissioner can still submit and edit entries on a locked pool (for corrections)
+- [x] `pool.locked_at` checked inline (no helper — used in three call sites; a one-line check is clearer than a helper)
+- [x] Setup tab: "Lock pool" toggle (commissioner only). Locking writes `locked_at = now()`; unlocking sets `locked_at = null`. Confirmation modal on both transitions. Status line shows "Locked &lt;date&gt; &lt;time&gt; — entries closed" when locked.
+- [x] Entry submit form: hidden for non-commissioners when locked. Shows a `banner-info` "This pool is locked…" banner in its place
+- [x] Entries list: per-entry Edit button hidden for non-commissioners on locked pools (entries themselves remain visible read-only)
+- [x] Commissioner can still submit and edit entries on a locked pool (for corrections)
 
 **Edge cases**
 
-- [ ] Pool locked while a non-commissioner has the entry form open: their submit is rejected by RLS. Client should surface the RLS error as "This pool has been locked — your picks could not be saved."
-- [ ] Lock/unlock is reversible by the commissioner at any time; no confirmation modal needed
+- [x] Pool locked while a non-commissioner has the entry form open: client guard short-circuits with a `Pool is locked. Contact the commissioner.` toast; `upsertEntry` also throws so any other caller surfaces a clean error before the network round trip. RLS is the actual boundary.
+- [x] Lock/unlock has a confirmation modal for clarity (the brief upgraded the original "no modal" plan after seeing the destructive-control neighbours in the Setup tab)
 
 **Acceptance criteria**
 
-- [ ] Commissioner can lock and unlock a pool from the Setup tab; `locked_at` is stored and displayed
-- [ ] Non-commissioner entry form hidden and banner shown on a locked pool
-- [ ] Commissioner entry form still works on a locked pool
-- [ ] RLS blocks a direct `INSERT` to `entries` for a non-commissioner when pool is locked (verify via devtools or curl)
-- [ ] Mid-edit lock: non-commissioner submit returns a clear "pool locked" error
+- [x] Commissioner can lock and unlock a pool from the Setup tab; `locked_at` is stored and displayed
+- [x] Non-commissioner entry form hidden and banner shown on a locked pool
+- [x] Commissioner entry form still works on a locked pool
+- [x] RLS blocks a direct `INSERT` to `entries` for a non-commissioner when pool is locked (see scenario 2 in `tests/manual/phase-3.2.md`)
+- [x] Mid-edit lock: non-commissioner submit short-circuits with a clear "pool locked" toast
 
 ---
 
