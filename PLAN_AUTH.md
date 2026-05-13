@@ -195,6 +195,86 @@ Goal: users can upgrade their anonymous account to a real one with an email, unl
 
 ---
 
+## Phase 3.1: Orphan prevention
+
+Goal: prevent anonymous-user entries from becoming permanently unrecoverable; add a post-submit nudge toward email claiming and a name-match claim path for existing entries.
+
+**Context**
+
+Phase 2 links new entries to `user_id`. But those IDs belong to anonymous users who may never claim an account — clearing browser data severs the link permanently. This phase adds two recovery paths: a timely prompt after entry submission (3.1a) and a retroactive name-match claim via a server-side RPC (3.1b).
+
+**Schema changes**
+
+- [ ] New `claim_entry(entry_id uuid)` function, `SECURITY DEFINER`, added to `supabase/schema.sql`. Runs as the service role so it can read `auth.users.is_anonymous` — RLS prevents clients from reading other users' rows directly.
+
+**Client changes (3.1a — post-submit prompt)**
+
+> Merged on branch `phase-3.1a-post-submit-prompt`. Acceptance testing passed May 13, 2026.
+
+- [x] After a successful entry upsert, check `currentUser.is_anonymous`. If true, show a "Save your entry across devices" modal with an email input
+- [x] Modal calls `sendSignInLink(email)` — extracted core shared with `handleSignIn`; same `updateUser`/OTP-fallback flow as phase 3's hub sign-in. Confirmation link preserves `user.id`, flips `is_anonymous` to false.
+- [x] Dismiss closes the modal; no persistent suppression — re-prompts on every entry save while anonymous
+- [x] Already-claimed users never see this modal; modal skipped if any modal is already open
+
+**Client changes (3.1b — name-match claim)**
+
+- [ ] In the Entries tab, for entries where `user_id` is null or belongs to an anonymous user, show a "This is me" button next to entries matching `getLastName()`
+- [ ] Clicking opens a confirmation modal; on confirm, calls the `claim_entry` RPC
+- [ ] Handle all three RPC outcomes:
+  - `claimed` — update the entry row in local state; hide the button
+  - `requires-signin` — show: "This pick belongs to [f***@bar.com]. Sign in as that account to claim it."
+  - `error` — show a generic error message
+
+**RPC behavior (`claim_entry`)**
+
+- [ ] Entry's `user_id` is null → write `user_id = auth.uid()`, return `{ outcome: 'claimed' }`
+- [ ] Entry's `user_id` belongs to an anonymous user → same write, return `{ outcome: 'claimed' }`
+- [ ] Entry's `user_id` belongs to a claimed (non-anonymous) user → return `{ outcome: 'requires-signin', masked_email: 'f***@bar.com' }`
+- [ ] Entry not found → return `{ outcome: 'error' }`
+
+**Acceptance criteria**
+
+- [x] Anonymous user submits an entry → post-submit modal appears; "Not now" dismisses with no persistent state; re-prompts on next submit; claimed users never see it
+- [x] Claiming via the modal sends a link; after confirmation, `is_anonymous` is false and subsequent submits don't trigger the prompt
+- [ ] "This is me" button appears only for unclaimed/anonymous-owned entries matching the user's stored last name (3.1b)
+- [ ] `claim_entry` returns all three outcomes correctly; client handles each without error (3.1b)
+- [ ] `claim_entry` is `SECURITY DEFINER` and readable only via RPC — no direct `auth.users` exposure to clients (3.1b)
+
+---
+
+## Phase 3.2: Commissioner pool locking
+
+Goal: commissioners can lock a pool to prevent new entries and edits after the pick deadline, enforced both in the client and at the database layer.
+
+**Schema changes**
+
+- [ ] Add `locked_at timestamptz` to `pools` (nullable; null = unlocked)
+- [ ] RLS policy on `entries`: block INSERT and UPDATE when `(SELECT locked_at FROM pools WHERE id = pool_id) IS NOT NULL`, unless the calling user is the pool's commissioner (`commissioner_user_id = auth.uid()` — from phase 4, or fall back to `commissioner_key` check)
+- [ ] Update `supabase/schema.sql`
+
+**Client changes**
+
+- [ ] `isLocked` helper: `pool.locked_at !== null`
+- [ ] Setup tab: "Lock pool" toggle (commissioner only). Locking writes `locked_at = now()`; unlocking sets `locked_at = null`. Show the lock timestamp when locked ("Locked on May 9 at 12:30 PM")
+- [ ] Entry submit form: hidden for non-commissioners when `isLocked`. Show a "Picks are locked" banner in its place
+- [ ] Entry edit: same gate — edit form hidden for non-commissioners on locked pools
+- [ ] Commissioner can still submit and edit entries on a locked pool (for corrections)
+
+**Edge cases**
+
+- [ ] Pool locked while a non-commissioner has the entry form open: their submit is rejected by RLS. Client should surface the RLS error as "This pool has been locked — your picks could not be saved."
+- [ ] Lock/unlock is reversible by the commissioner at any time; no confirmation modal needed
+
+**Acceptance criteria**
+
+- [ ] Commissioner can lock and unlock a pool from the Setup tab; `locked_at` is stored and displayed
+- [ ] Non-commissioner entry form hidden and banner shown on a locked pool
+- [ ] Commissioner entry form still works on a locked pool
+- [ ] RLS blocks a direct `INSERT` to `entries` for a non-commissioner when pool is locked (verify via devtools or curl)
+- [ ] Mid-edit lock: non-commissioner submit returns a clear "pool locked" error
+
+---
+
 ## Phase 4: Commissioner migration
 
 Goal: commissioner role lives on the user, not on localStorage. Existing commish keys become a fallback / migration path.

@@ -130,8 +130,28 @@ Acceptance criteria — all passed:
 
 ---
 
+## Auth migration — phase 3.1a (post-submit email prompt)
+
+Merged on branch `phase-3.1a-post-submit-prompt`. Adds a post-submit modal nudging anonymous users to attach an email after saving an entry. Entry is always saved first — the modal is non-blocking. Acceptance testing passed May 13, 2026.
+
+| Item | Commit |
+|------|--------|
+| Extract `sendSignInLink`; add `showPostSubmitClaimModal` + hook into entry save | 2a7bf84 |
+| Docs: phase 3.1a boxes ticked; PROGRESS.md + CLAUDE.md updated | (this commit) |
+
+Acceptance criteria — all passed:
+- [x] Anonymous user creates new entry → modal appears
+- [x] Anonymous user edits existing entry → modal appears
+- [x] "Not now" → modal closes, no localStorage written; re-prompts on next submit
+- [x] "Save my entry" with valid email → confirmation screen shown, email sent
+- [x] Clicking confirmation link → `onAuthStateChange` fires `USER_UPDATED`, toast shows, user no longer anonymous, subsequent submits don't trigger the prompt
+- [x] Sign-in modal already open when a submit happens → no modal stacking
+- [x] Existing sign-in flow from hub header unchanged (regression check)
+
+---
+
 ## Open / upcoming
 
-- **Auth phases 2, 4, 5** — entry linking (skipped for now), commissioner migration, leagues (see PLAN_AUTH.md)
+- **Auth phases 2, 3.1b, 3.2, 4, 5** — entry linking, orphan name-match claim, commissioner pool locking, commissioner migration, leagues (see PLAN_AUTH.md)
 - **Season-long scoring** — multi-week / multi-major cumulative leaderboard. Entries persist across events; scores accumulate over the season. Schema and UI TBD.
 - **Golfball mascot** — a golfball character who drinks and smokes. Vibes TBD.
