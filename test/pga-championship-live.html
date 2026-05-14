@@ -404,9 +404,68 @@ async function fetchScores() {
   return { tournament: null, players: [], source: 'none' };
 }
 
+// Extract numeric to-par from a round entry. The proxy returns rounds either as
+// bare numbers (rare) or as { relative: N, inProgress?: bool, holesPlayed?: N }
+// objects. The raw-ESPN fallback path stores bare numbers. Returns null when
+// the round has no usable to-par value (e.g. relative:null + raw:strokes).
+function roundRelative(r) {
+  if (r === null || r === undefined) return null;
+  if (typeof r === 'number') return r;
+  if (typeof r === 'object' && typeof r.relative === 'number') return r.relative;
+  return null;
+}
+function roundInProgress(r) {
+  return !!(r && typeof r === 'object' && r.inProgress);
+}
+function roundHolesPlayed(r) {
+  return (r && typeof r === 'object' && typeof r.holesPlayed === 'number') ? r.holesPlayed : 0;
+}
+
 function parseEspn(j) {
   if (!j) return null;
-  if (Array.isArray(j.players)) return { tournament: j.tournament, players: j.players };
+
+  // ── Proxy normalized payload ────────────────────────────────────────
+  // Shape: { tournament: { id, name, status, statusDetail }, players: [{
+  //   name, rounds: { 1: {relative,…} | number, … }, status: 'active'|'mc'|'wd'
+  // }] }
+  // The proxy does NOT surface `.live` per player or `.round` on the
+  // tournament — derive both from the round entries.
+  if (Array.isArray(j.players)) {
+    const players = j.players.map(p => {
+      let live = null;
+      const rounds = p.rounds || {};
+      for (const [period, r] of Object.entries(rounds)) {
+        if (roundInProgress(r)) {
+          live = { thru: roundHolesPlayed(r), round: Number(period) };
+          break;
+        }
+      }
+      return { ...p, live };
+    });
+
+    // Current round: prefer parsing "Round N" from the proxy's statusDetail,
+    // fall back to the max round number across all players' rounds.
+    const sd = (j.tournament && (j.tournament.statusDetail || j.tournament.statusDescription)) || '';
+    let round = null;
+    const m = sd.match(/round\s+(\d+)/i);
+    if (m) round = Number(m[1]);
+    if (!round) {
+      let maxRound = 0;
+      players.forEach(p => Object.keys(p.rounds || {}).forEach(k => {
+        const n = Number(k); if (n > maxRound) maxRound = n;
+      }));
+      if (maxRound) round = maxRound;
+    }
+
+    const tournament = {
+      ...(j.tournament || {}),
+      round,
+      statusDescription: sd || (j.tournament && j.tournament.statusDescription) || '',
+    };
+    return { tournament, players };
+  }
+
+  // ── Raw ESPN scoreboard fallback ────────────────────────────────────
   if (Array.isArray(j.events) && j.events[0]) {
     const ev = j.events[0];
     const comp = (ev.competitions || [])[0] || {};
@@ -497,13 +556,14 @@ function buildScoreIndex(players) {
 
 function pickSum(p) {
   if (!p) return null;
-  const vs = Object.values(p.rounds || {});
+  const vs = Object.values(p.rounds || {}).map(roundRelative).filter(v => v !== null);
   if (!vs.length) return null;
-  return vs.reduce((a, b) => a + (b ?? 0), 0);
+  return vs.reduce((a, b) => a + b, 0);
 }
 function pickRoundsPlayed(p) {
   if (!p) return 0;
-  return Object.keys(p.rounds || {}).length;
+  // Count only rounds that have a usable to-par value
+  return Object.values(p.rounds || {}).filter(r => roundRelative(r) !== null).length;
 }
 
 function entryStats(entry, scoreIdx, cutPenaltyVal) {
