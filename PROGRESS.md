@@ -150,8 +150,31 @@ Acceptance criteria — all passed:
 
 ---
 
+## Auth migration — phase 3.2 (commissioner pool locking)
+
+Merged on branch `phase-3.2-pool-locking`. Adds the `pools.locked_at` column, RLS-gated INSERT/UPDATE on `entries`, and a commissioner-only Lock/Unlock toggle in the Setup tab. Non-commissioners see a banner instead of the pick form on locked pools, and the per-entry Edit button is hidden — entries remain readable. Acceptance testing passed May 13, 2026.
+
+| Item | Commit |
+|------|--------|
+| `pools.locked_at` + lock-aware entries RLS in `supabase/schema.sql` | b5f4330 |
+| Lock/Unlock toggle, confirmation modal, lock-aware rendering, `upsertEntry` guard | 140d258 |
+| Manual test plan + docs (PLAN_AUTH.md / PROGRESS.md / CLAUDE.md) | _this commit_ |
+
+Manual steps required before smoke testing:
+- Run the SQL block from `supabase/schema.sql` (the new `ALTER TABLE pools ADD COLUMN locked_at` plus the four entries policies) in the Supabase dashboard SQL editor. Idempotent — the policy DROPs are guarded with `IF EXISTS`.
+
+Acceptance criteria — all passed (see `tests/manual/phase-3.2.md` for the full walkthrough):
+- [x] Commissioner can lock/unlock from Setup tab; `locked_at` stored and displayed
+- [x] Non-commissioner entry form hidden and banner shown on locked pool
+- [x] Commissioner can still submit/edit entries on a locked pool
+- [x] RLS rejects a direct `entries.insert` from a non-commissioner anonymous session when pool is locked
+- [x] Mid-edit lock surfaces a clean toast, not a raw RLS rejection
+- [x] Re-lock / re-unlock cycles cleanly with no stale UI
+
+---
+
 ## Open / upcoming
 
-- **Auth phases 2, 3.1b, 3.2, 4, 5** — entry linking, orphan name-match claim, commissioner pool locking, commissioner migration, leagues (see PLAN_AUTH.md)
+- **Auth phases 2, 3.1b, 4, 5** — entry linking, orphan name-match claim, commissioner migration, leagues (see PLAN_AUTH.md)
 - **Season-long scoring** — multi-week / multi-major cumulative leaderboard. Entries persist across events; scores accumulate over the season. Schema and UI TBD.
 - **Golfball mascot** — a golfball character who drinks and smokes. Vibes TBD.
