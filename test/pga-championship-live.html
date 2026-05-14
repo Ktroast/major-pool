@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Major Pool · 2026 PGA Championship · Hybrid Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'media',
+    theme: { extend: {
+      fontFamily: {
+        sans: ['Inter','ui-sans-serif','system-ui','sans-serif'],
+        mono: ['JetBrains Mono','ui-monospace','monospace'],
+      },
+      colors: {
+        canvas:  '#F5F4F0', surface: '#FFFFFF', surface2: '#FBFAF6', hairline: '#E7E5E0',
+        ink1:    '#0A0A0A', ink2:    '#5B5B58', ink3:    '#9A9A95',
+        under:   '#B8112C', brass:   '#8A6A2B', live:    '#E11D48',
+        dcanvas: '#0A0B0E', dsurface: '#15171C', dsurface2: '#1B1E25', dhairline: '#262A33',
+        dink1:   '#F5F4EE', dink2:    '#A4A39C', dink3:    '#6B6B66',
+        dunder:  '#FF6B7E', dbrass:   '#C9A75A', dlive:    '#FB7185',
+      }
+    }}
+  };
+</script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<style>
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* ── Card (mobile) ─────────────────────────────────────── */
+  .card {
+    background: #FFFFFF; border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(10,10,10,0.04), 0 6px 24px -12px rgba(10,10,10,0.10);
+    transition: transform 200ms ease, box-shadow 200ms ease;
+  }
+  .card-hero {
+    background: linear-gradient(135deg, #FBFAF6 0%, #FFFFFF 100%);
+    border-radius: 18px;
+    box-shadow: 0 2px 4px rgba(10,10,10,0.05), 0 16px 48px -16px rgba(138,106,43,0.18);
+    position: relative; overflow: hidden;
+  }
+  .card-hero::before {
+    content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 4px;
+    background: linear-gradient(180deg, #8A6A2B 0%, rgba(138,106,43,0.3) 100%);
+  }
+  @media (prefers-color-scheme: dark) {
+    .card { background: #15171C; box-shadow: 0 1px 2px rgba(0,0,0,0.4), 0 8px 28px -12px rgba(0,0,0,0.6); }
+    .card-hero { background: linear-gradient(135deg, #1B1E25 0%, #15171C 100%);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5), 0 16px 48px -16px rgba(201,167,90,0.18); }
+    .card-hero::before { background: linear-gradient(180deg, #C9A75A 0%, rgba(201,167,90,0.3) 100%); }
+  }
+
+  /* ── Picks strip (mobile) ──────────────────────────────── */
+  .picks-strip {
+    display: flex; gap: 8px; overflow-x: auto;
+    scrollbar-width: thin; padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .picks-strip::-webkit-scrollbar { height: 4px; }
+  .picks-strip::-webkit-scrollbar-thumb { background: rgba(10,10,10,0.1); border-radius: 999px; }
+  @media (prefers-color-scheme: dark) { .picks-strip::-webkit-scrollbar-thumb { background: rgba(245,244,238,0.1); } }
+
+  .pick-pill {
+    flex: 0 0 auto;
+    display: inline-flex; flex-direction: column; gap: 2px;
+    padding: 8px 12px; border-radius: 10px;
+    background: rgba(10,10,10,0.03); min-width: 96px;
+    border: 1px solid transparent;
+  }
+  .pick-pill.dropped { opacity: 0.45; }
+  .pick-pill.dropped .pick-name { text-decoration: line-through; }
+  .pick-pill.cut  { background: rgba(184,17,44,0.05); }
+  .pick-pill.live { background: rgba(225,29,72,0.06); border-color: rgba(225,29,72,0.2); }
+  @media (prefers-color-scheme: dark) {
+    .pick-pill { background: rgba(245,244,238,0.04); }
+    .pick-pill.cut  { background: rgba(255,107,126,0.08); }
+    .pick-pill.live { background: rgba(251,113,133,0.08); border-color: rgba(251,113,133,0.25); }
+  }
+
+  /* ── Badges ────────────────────────────────────────────── */
+  .badge {
+    display: inline-flex; align-items: center;
+    padding: 1px 5px; border-radius: 3px;
+    font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .badge-cut  { background: rgba(184,17,44,0.12); color: #B8112C; }
+  .badge-live { background: rgba(225,29,72,0.10); color: #E11D48; }
+  .badge-drop { background: rgba(10,10,10,0.06); color: #9A9A95; }
+  .badge-tier { background: rgba(138,106,43,0.10); color: #8A6A2B; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.04em; }
+  @media (prefers-color-scheme: dark) {
+    .badge-cut  { background: rgba(255,107,126,0.15); color: #FF6B7E; }
+    .badge-live { background: rgba(251,113,133,0.15); color: #FB7185; }
+    .badge-drop { background: rgba(245,244,238,0.06); color: #6B6B66; }
+    .badge-tier { background: rgba(201,167,90,0.12); color: #C9A75A; }
+  }
+
+  /* ── Pulse (subtle, no flashing) ───────────────────────── */
+  @keyframes livePulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+  .pulse { animation: livePulse 2s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .pulse { animation: none !important; } }
+
+  /* ── Desktop dense table ───────────────────────────────── */
+  .lb-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .lb-table thead th {
+    position: sticky; top: 64px; z-index: 10;
+    background: #FBFAF6;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600;
+    color: #9A9A95; padding: 8px 6px;
+    border-top: 1px solid #E7E5E0; border-bottom: 1px solid #E7E5E0;
+    text-align: right;
+  }
+  .lb-table thead th.l { text-align: left; }
+  .lb-table tbody tr {
+    border-bottom: 1px solid #EFEDE7;
+    transition: background-color 120ms ease, border-left-color 120ms ease;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+  }
+  .lb-table tbody tr:hover {
+    background: #FBFAF6;
+    border-left-color: #8A6A2B;
+  }
+  .lb-table tbody tr.is-live {
+    border-left-color: rgba(225,29,72,0.35);
+  }
+  .lb-table tbody tr.is-leader {
+    background: linear-gradient(90deg, rgba(138,106,43,0.06) 0%, transparent 60%);
+  }
+  .lb-table td { padding: 8px 6px; text-align: right; vertical-align: middle; }
+  .lb-table td.l { text-align: left; }
+  @media (prefers-color-scheme: dark) {
+    .lb-table thead th { background: #1B1E25; color: #6B6B66; border-color: #262A33; }
+    .lb-table tbody tr { border-bottom-color: #1F2229; }
+    .lb-table tbody tr:hover { background: #1B1E25; }
+    .lb-table tbody tr.is-leader { background: linear-gradient(90deg, rgba(201,167,90,0.08) 0%, transparent 60%); }
+  }
+
+  /* ── Pick cell (desktop) ──────────────────────────────── */
+  .pick-cell {
+    display: inline-flex; align-items: baseline; gap: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .pick-cell .pick-last {
+    font-size: 11px; color: #5B5B58; max-width: 64px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .pick-cell .pick-score { font-weight: 600; }
+  .pick-cell.is-dropped { opacity: 0.4; text-decoration: line-through; }
+  .pick-cell.is-cut .pick-score { color: #B8112C; }
+  .pick-cell.is-live .pick-score { color: #E11D48; }
+  .pick-cell.is-live .pick-last::after {
+    content: ''; display: inline-block; margin-left: 4px;
+    width: 5px; height: 5px; border-radius: 999px;
+    background: #E11D48; vertical-align: middle;
+    animation: livePulse 2s ease-in-out infinite;
+  }
+  @media (prefers-color-scheme: dark) {
+    .pick-cell .pick-last { color: #A4A39C; }
+    .pick-cell.is-cut .pick-score { color: #FF6B7E; }
+    .pick-cell.is-live .pick-score { color: #FB7185; }
+    .pick-cell.is-live .pick-last::after { background: #FB7185; }
+  }
+
+  /* ── Show/hide layouts ────────────────────────────────── */
+  .layout-cards { display: block; }
+  .layout-table { display: none; }
+  @media (min-width: 900px) {
+    .layout-cards { display: none; }
+    .layout-table { display: block; }
+  }
+
+  /* ── Placeholder data banner ──────────────────────────── */
+  .ph-banner {
+    background: linear-gradient(135deg, rgba(138,106,43,0.08), rgba(225,29,72,0.05));
+    border: 1px solid rgba(138,106,43,0.25);
+  }
+  @media (prefers-color-scheme: dark) {
+    .ph-banner { background: linear-gradient(135deg, rgba(201,167,90,0.08), rgba(251,113,133,0.05));
+                 border-color: rgba(201,167,90,0.25); }
+  }
+</style>
+</head>
+
+<body class="bg-canvas dark:bg-dcanvas text-ink1 dark:text-dink1 font-sans antialiased min-h-screen">
+
+  <!-- Sticky header -->
+  <header class="sticky top-0 z-30 bg-canvas/85 dark:bg-dcanvas/85 backdrop-blur border-b border-hairline dark:border-dhairline">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 py-3 flex items-center gap-3 sm:gap-4">
+      <div class="min-w-0">
+        <div class="text-[10px] uppercase tracking-[0.15em] text-ink3 dark:text-dink3 font-semibold">The Major Pool</div>
+        <h1 class="mt-0.5 text-[17px] sm:text-[19px] font-bold leading-tight truncate">
+          2026 PGA Championship <span class="hidden sm:inline text-ink3 dark:text-dink3 font-medium">· Aronimink</span>
+        </h1>
+      </div>
+      <button id="refreshBtn" type="button"
+              class="ml-auto inline-flex items-center gap-2 rounded-full bg-surface dark:bg-dsurface border border-hairline dark:border-dhairline px-3 py-1.5 text-[12px] text-ink2 dark:text-dink2 hover:bg-surface2 dark:hover:bg-dsurface2 transition-colors cursor-pointer shadow-sm">
+        <span class="relative flex h-1.5 w-1.5">
+          <span class="absolute inline-flex h-full w-full rounded-full bg-live dark:bg-dlive pulse"></span>
+          <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-live dark:bg-dlive"></span>
+        </span>
+        <span class="font-semibold tracking-wide uppercase text-[10px]" id="liveLabel">Live</span>
+        <span class="text-ink3 dark:text-dink3 num text-[11px]" id="updatedLabel">—</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl px-4 sm:px-6 py-5 sm:py-8">
+
+    <!-- Placeholder banner (shown by default unless real picks load) -->
+    <div id="placeholderBanner" class="ph-banner rounded-lg px-4 py-3 mb-5 flex items-start gap-3">
+      <svg class="w-5 h-5 text-brass dark:text-dbrass shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+      <div class="text-[13px] leading-snug">
+        <span class="font-semibold">Placeholder entries.</span>
+        <span class="text-ink2 dark:text-dink2"> No Major Pool picks exist for this event yet. The 74 entries below are fake — but their picks reference real PGA Championship field, so live scores from ESPN populate correctly.</span>
+        <span class="block mt-1 text-[11px] text-ink3 dark:text-dink3">Append <span class="font-mono">?pin=YOURPIN</span> to the URL to load real entries from Supabase.</span>
+      </div>
+    </div>
+
+    <!-- Stats strip -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
+      <div class="rounded-lg bg-surface dark:bg-dsurface border border-hairline dark:border-dhairline px-3 py-2.5">
+        <div class="text-[9px] uppercase tracking-[0.12em] text-ink3 dark:text-dink3 font-semibold">Round</div>
+        <div class="mt-1 text-[16px] font-bold num" id="stat-round">—</div>
+      </div>
+      <div class="rounded-lg bg-surface dark:bg-dsurface border border-hairline dark:border-dhairline px-3 py-2.5">
+        <div class="text-[9px] uppercase tracking-[0.12em] text-ink3 dark:text-dink3 font-semibold">Cut Penalty</div>
+        <div class="mt-1 text-[16px] font-bold num" id="stat-cut">—</div>
+      </div>
+      <div class="rounded-lg bg-surface dark:bg-dsurface border border-hairline dark:border-dhairline px-3 py-2.5">
+        <div class="text-[9px] uppercase tracking-[0.12em] text-ink3 dark:text-dink3 font-semibold">Entries</div>
+        <div class="mt-1 text-[16px] font-bold num" id="stat-entries">—</div>
+      </div>
+      <div class="rounded-lg bg-surface dark:bg-dsurface border border-hairline dark:border-dhairline px-3 py-2.5">
+        <div class="text-[9px] uppercase tracking-[0.12em] text-ink3 dark:text-dink3 font-semibold">Live Picks</div>
+        <div class="mt-1 text-[16px] font-bold num text-live dark:text-dlive" id="stat-live">—</div>
+      </div>
+    </div>
+
+    <!-- Mobile card stack -->
+    <div id="cardStack" class="layout-cards flex flex-col gap-3"></div>
+
+    <!-- Desktop dense table -->
+    <div class="layout-table">
+      <table class="lb-table">
+        <thead>
+          <tr>
+            <th class="l">Pos</th>
+            <th class="l">Entry</th>
+            <th class="l">A</th>
+            <th class="l">B</th>
+            <th class="l">C</th>
+            <th class="l">D</th>
+            <th class="l">E</th>
+            <th>Drop</th>
+            <th>Thru</th>
+            <th>Tiebrk</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody id="lbBody"></tbody>
+      </table>
+    </div>
+
+    <p class="mt-6 text-center text-[11px] text-ink3 dark:text-dink3">
+      Best 4 of 5 picks count · lowest total wins · <span class="line-through">strikethrough</span> = dropped (highest pick total, not counted)
+    </p>
+  </main>
+
+<script>
+//============================================================================
+// CONFIG
+//============================================================================
+const ESPN_EVENT_ID = '401811947';   // 2026 PGA Championship
+const SUPABASE_URL  = 'https://tuglwvmwmacaqggpipri.supabase.co';
+const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1Z2x3dm13bWFjYXFnZ3BpcHJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MTY1MDIsImV4cCI6MjA5MjE5MjUwMn0.qzK4t1Ohx3AEFU-KFreGREJ39pCDYXO6HJjxOCdAOrg';
+
+// Top ~60 names from the live PGA Championship field, sliced into 5 tiers (A-E)
+// of ~12 each. Order is roughly by reputation/seeding (subjective groupings).
+const TIERS = {
+  A: ['Scottie Scheffler','Rory McIlroy','Xander Schauffele','Jon Rahm','Collin Morikawa','Justin Thomas','Hideki Matsuyama','Viktor Hovland','Ludvig Åberg','Bryson DeChambeau','Patrick Cantlay','Brooks Koepka'],
+  B: ['Tommy Fleetwood','Tony Finau','Justin Rose','Shane Lowry','Jordan Spieth','Joaquín Niemann','Sahith Theegala','Sam Burns','Wyndham Clark','Cameron Smith','Russell Henley','Brian Harman'],
+  C: ['Sungjae Im','Tom Kim','Robert MacIntyre','Akshay Bhatia','Min Woo Lee','Corey Conners','Jason Day','Tyrrell Hatton','Matt Fitzpatrick','Si Woo Kim','Adam Scott','Keegan Bradley'],
+  D: ['Maverick McNealy','Sepp Straka','Cameron Young','Aaron Rai','Sam Stevens','Andrew Novak','Andrew Putnam','Ben Griffin','Denny McCarthy','Nick Taylor','Patrick Reed','J.J. Spaun'],
+  E: ['Davis Thompson','Taylor Pendrith','Stephan Jaeger','Mackenzie Hughes','J.T. Poston','Erik van Rooyen','Daniel Brown','Max Greyserman','Kurt Kitayama','Ryo Hisatsune','Rico Hoey','Alex Smalley'],
+};
+
+//============================================================================
+// PRNG (seeded so placeholder entries are stable across reloads)
+//============================================================================
+function mulberry32(seed){let a=seed;return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const rand = mulberry32(20260514);
+const pick = a => a[Math.floor(rand()*a.length)];
+
+const PAIR_FIRST = ['Keenan','Mike','Sarah','Tom','Alex','Jamie','Pat','Chris','Ryan','Drew','Kate','Ben','Jess','Sam','Will','Andy','Megan','Luke','Owen','Beth','Nate','Liz','Joe','Maddy','Connor','Ethan','Hannah','Ian','Jordan','Kyle','Logan','Mia','Noah','Olivia','Quinn','Riley','Tyler','Vince','Wes','Zoe','Abby','Brian','Cara','Dan','Erin','Finn','Gus','Holly','Ivy','Jake','Kim','Leo','Mark','Nick','Paige','Reese','Scott','Theo','Uma','Vera'];
+
+function makePlaceholderEntries(n = 74) {
+  const used = new Set();
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    let a, b, key;
+    do { a = pick(PAIR_FIRST); b = pick(PAIR_FIRST); key = [a,b].sort().join('|'); }
+    while (a === b || used.has(key));
+    used.add(key);
+    out.push({
+      id: 'ph-' + i,
+      name: `${a} & ${b}`,
+      tiebreaker: -(8 + Math.floor(rand() * 13)),  // -8 to -20
+      picks: [pick(TIERS.A), pick(TIERS.B), pick(TIERS.C), pick(TIERS.D), pick(TIERS.E)],
+    });
+  }
+  return out;
+}
+
+//============================================================================
+// ESPN fetch — proxy first, public ESPN fallback
+//============================================================================
+async function fetchScores() {
+  const tryUrls = [
+    `/.netlify/functions/golf-leaderboard?eventId=${ESPN_EVENT_ID}`,
+    `https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?event=${ESPN_EVENT_ID}`,
+  ];
+  for (const url of tryUrls) {
+    try {
+      const r = await fetch(url);
+      if (!r.ok) continue;
+      const j = await r.json();
+      const parsed = parseEspn(j);
+      if (parsed && parsed.players && parsed.players.length) {
+        parsed.source = url.startsWith('/') ? 'proxy' : 'espn-direct';
+        return parsed;
+      }
+    } catch (_) { /* try next */ }
+  }
+  return { tournament: null, players: [], source: 'none' };
+}
+
+// Accepts either:
+//  - Proxy normalized payload: { tournament, players: [{ name, rounds, status, ... }] }
+//  - Raw ESPN scoreboard: { events: [...] }
+function parseEspn(j) {
+  if (!j) return null;
+  // Proxy shape
+  if (Array.isArray(j.players)) return { tournament: j.tournament, players: j.players };
+  // Raw ESPN shape
+  if (Array.isArray(j.events) && j.events[0]) {
+    const ev = j.events[0];
+    const comp = (ev.competitions || [])[0] || {};
+    const competitors = comp.competitors || [];
+    const currentRound = (comp.status && comp.status.period) || 1;
+    const inProgress = comp.status?.type?.state === 'in';
+    const players = competitors.map(c => {
+      const name = (c.athlete && (c.athlete.displayName || c.athlete.fullName)) || '';
+      const linescores = c.linescores || [];
+      const rounds = {};
+      linescores.forEach((ls, idx) => {
+        if (ls && ls.displayValue) {
+          const dv = ls.displayValue;
+          // displayValue like '-3', '+1', 'E'
+          const r = dv === 'E' ? 0 : Number(dv);
+          if (!Number.isNaN(r)) rounds[idx + 1] = r;
+        }
+      });
+      const status = c.status || {};
+      const isInProgress = inProgress && status.period === currentRound;
+      const thru = status.thru || null;
+      const isCut = status.cut === true;
+      const isWd  = status.withdrawn === true;
+      return {
+        name,
+        rounds,
+        status: isWd ? 'wd' : isCut ? 'mc' : 'active',
+        live: isInProgress ? { thru: thru || 0, round: currentRound } : null,
+      };
+    });
+    return {
+      tournament: {
+        name: ev.name,
+        round: currentRound,
+        statusDescription: comp.status?.type?.description || '',
+        date: ev.date,
+      },
+      players,
+    };
+  }
+  return null;
+}
+
+//============================================================================
+// Supabase (optional) — load real entries if ?pin= is provided
+//============================================================================
+async function fetchSupabaseEntries(pin) {
+  if (!pin) return null;
+  try {
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const { data: pool, error: pErr } = await sb.from('pools').select('id, name, espn_event_id').eq('pin', pin.toUpperCase()).maybeSingle();
+    if (pErr || !pool) return null;
+    const { data: entries } = await sb.from('entries').select('id, owner_name, tiebreaker, picks').eq('pool_id', pool.id);
+    if (!entries || !entries.length) return null;
+    // `picks` is jsonb — array of {tier, name} or array of names (tolerate both shapes)
+    return entries.map(e => ({
+      id: e.id,
+      name: e.owner_name,
+      tiebreaker: e.tiebreaker ?? 0,
+      picks: (e.picks || []).map(p => typeof p === 'string' ? p : (p.name || p.golfer_name || '')),
+    }));
+  } catch (err) {
+    console.warn('Supabase load skipped:', err);
+    return null;
+  }
+}
+
+//============================================================================
+// Pick resolution + best-4-of-5 standings
+//============================================================================
+function fmtToPar(n) {
+  if (n === null || n === undefined || Number.isNaN(n)) return '—';
+  if (n === 0) return 'E';
+  return n < 0 ? '−' + Math.abs(n) : '+' + n;
+}
+function scoreClass(n) {
+  if (n === null || n === undefined) return 'text-ink3 dark:text-dink3';
+  return n < 0 ? 'text-under dark:text-dunder' : 'text-ink1 dark:text-dink1';
+}
+
+// Normalize names for fuzzy match (ESPN sometimes drops accents differently)
+function normName(s) {
+  return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
+}
+
+function buildScoreIndex(players) {
+  const idx = new Map();
+  players.forEach(p => idx.set(normName(p.name), p));
+  return idx;
+}
+
+function pickSum(p) {
+  if (!p) return null;
+  return Object.values(p.rounds || {}).reduce((a, b) => a + (b ?? 0), 0);
+}
+function pickRoundsPlayed(p) {
+  if (!p) return 0;
+  return Object.keys(p.rounds || {}).length;
+}
+
+function entryStats(entry, scoreIdx, cutPenaltyVal) {
+  const resolved = entry.picks.map((name, tierIdx) => {
+    const player = scoreIdx.get(normName(name));
+    const tier = 'ABCDE'[tierIdx];
+    if (!player) {
+      return { tier, name, sum: null, status: 'unknown', live: null, played: 0, missing: true };
+    }
+    const sum = pickSum(player);
+    return {
+      tier,
+      name: player.name,
+      sum: player.status === 'mc' || player.status === 'wd' ? (cutPenaltyVal ?? sum) : sum,
+      rawSum: sum,
+      status: player.status,
+      live: player.live,
+      played: pickRoundsPlayed(player),
+      missing: false,
+    };
+  });
+  // Drop the WORST (highest sum, treating null as a moderate penalty so missing data isn't free)
+  const ranked = resolved.map(p => ({...p, _sortSum: p.sum === null ? 99 : p.sum}))
+    .sort((a, b) => a._sortSum - b._sortSum);
+  const dropName = ranked[4].name;
+  const droppedTier = ranked[4].tier;
+  const counted = ranked.slice(0, 4);
+  const total = counted.every(p => p.sum === null) ? null
+              : counted.reduce((a, p) => a + (p.sum ?? 0), 0);
+  const picksMarked = resolved.map(p => ({...p, isDropped: p.tier === droppedTier}));
+  const livePicks   = resolved.filter(p => p.live).length;
+  return {
+    entry,
+    picks: picksMarked,
+    droppedTier,
+    total,
+    livePicks,
+    minPlayed: Math.min(...counted.map(p => p.played)),
+  };
+}
+
+function computeCutPenalty(players) {
+  const cuts = players.filter(p => p.status === 'mc' || p.status === 'wd');
+  if (!cuts.length) return null;
+  const avg = cuts.reduce((a, p) => a + pickSum(p), 0) / cuts.length;
+  return Math.round(avg * 4);
+}
+
+function rankStandings(rows) {
+  rows.sort((a, b) => {
+    if (a.total === null && b.total === null) return 0;
+    if (a.total === null) return 1;
+    if (b.total === null) return -1;
+    return a.total - b.total;
+  });
+  let pos = 0, lastScore = null;
+  rows.forEach((r, i) => {
+    if (r.total !== lastScore) { pos = i + 1; lastScore = r.total; }
+    const tied = rows.filter(x => x.total === r.total && x.total !== null).length > 1;
+    r.posDisplay = (tied ? 'T' : '') + pos;
+  });
+  return rows;
+}
+
+//============================================================================
+// Render
+//============================================================================
+function pickPillHtml(p) {
+  const cls = ['pick-pill'];
+  if (p.isDropped) cls.push('dropped');
+  if (p.status === 'mc' || p.status === 'wd') cls.push('cut');
+  if (p.live) cls.push('live');
+
+  const last = (p.name || '').split(' ').slice(-1)[0] || '—';
+  const scoreCls = scoreClass(p.sum);
+  let tag;
+  if (p.missing) {
+    tag = `<span class="badge badge-drop">Not in field</span>`;
+  } else if (p.status === 'mc' || p.status === 'wd') {
+    tag = `<span class="badge badge-cut">${p.status === 'wd' ? 'WD' : 'MC'}</span>`;
+  } else if (p.live) {
+    tag = `<span class="badge badge-live">thru ${p.live.thru || '—'}</span>`;
+  } else if (p.isDropped) {
+    tag = `<span class="badge badge-drop">Drop</span>`;
+  } else {
+    tag = `<span class="badge badge-tier">${p.tier}</span>`;
+  }
+
+  return `<div class="${cls.join(' ')}">
+    <div class="flex items-center justify-between gap-2">
+      <span class="pick-name text-[12px] font-semibold text-ink1 dark:text-dink1 truncate">${last}</span>
+      ${tag}
+    </div>
+    <div class="text-[15px] font-bold num ${scoreCls}">${fmtToPar(p.sum)}</div>
+  </div>`;
+}
+
+function cardHtml(row, idx) {
+  const isLeader = idx === 0;
+  const isTop3 = idx < 3;
+  const cardCls = isLeader ? 'card-hero p-5 sm:p-6' : 'card p-4';
+  const scoreColor = scoreClass(row.total);
+  const scoreSize = isLeader ? 'text-[44px]' : 'text-[30px]';
+
+  const liveBanner = row.livePicks > 0
+    ? `<div class="mt-2 inline-flex items-center gap-1.5 text-[11px] text-live dark:text-dlive font-semibold uppercase tracking-wide">
+         <span class="relative flex h-1.5 w-1.5"><span class="absolute inline-flex h-full w-full rounded-full bg-live dark:bg-dlive pulse"></span><span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-live dark:bg-dlive"></span></span>
+         ${row.livePicks} pick${row.livePicks === 1 ? '' : 's'} on course
+       </div>`
+    : '';
+
+  const posDisplay = isLeader
+    ? `<div class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-brass dark:bg-dbrass text-white dark:text-dcanvas text-[12px] font-bold num">${row.posDisplay}</div>`
+    : isTop3
+      ? `<span class="text-[14px] font-bold num text-brass dark:text-dbrass">${row.posDisplay}</span>`
+      : `<span class="text-[14px] font-semibold num text-ink2 dark:text-dink2">${row.posDisplay}</span>`;
+
+  const pills = row.picks.map(pickPillHtml).join('');
+
+  return `<article class="${cardCls}" data-id="${row.entry.id}">
+    <div class="flex items-start justify-between gap-3">
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-2">
+          ${posDisplay}
+          ${isLeader ? `<span class="text-[10px] uppercase tracking-[0.15em] text-brass dark:text-dbrass font-bold">Leader</span>` : ''}
+        </div>
+        <h2 class="mt-2 text-[18px] font-bold leading-tight truncate">${row.entry.name}</h2>
+        <p class="mt-0.5 text-[11px] text-ink3 dark:text-dink3 num">Tiebreaker ${fmtToPar(row.entry.tiebreaker)} · R${row.minPlayed || 0}/4 counted</p>
+        ${liveBanner}
+      </div>
+      <div class="text-right shrink-0">
+        <div class="${scoreSize} font-bold num ${scoreColor} leading-none tracking-tight">${fmtToPar(row.total)}</div>
+        <div class="mt-1 text-[10px] uppercase tracking-[0.12em] text-ink3 dark:text-dink3 font-semibold">to par</div>
+      </div>
+    </div>
+    <div class="mt-4 picks-strip">${pills}</div>
+  </article>`;
+}
+
+function pickCellHtml(p) {
+  const cls = ['pick-cell'];
+  if (p.isDropped) cls.push('is-dropped');
+  if (p.status === 'mc' || p.status === 'wd') cls.push('is-cut');
+  if (p.live) cls.push('is-live');
+  const last = (p.name || '').split(' ').slice(-1)[0] || '—';
+  const sc = scoreClass(p.sum);
+  return `<span class="${cls.join(' ')}">
+    <span class="pick-last">${last}</span>
+    <span class="pick-score ${sc}">${fmtToPar(p.sum)}</span>
+  </span>`;
+}
+
+function tableRowHtml(row, idx) {
+  const isLeader = idx === 0;
+  const trCls = [
+    row.livePicks > 0 ? 'is-live' : '',
+    isLeader ? 'is-leader' : '',
+  ].filter(Boolean).join(' ');
+  const totalCls = scoreClass(row.total);
+  const picksByTier = ['A','B','C','D','E'].map(t => row.picks.find(p => p.tier === t));
+  return `<tr class="${trCls}" data-id="${row.entry.id}">
+    <td class="l num font-semibold text-ink2 dark:text-dink2">${row.posDisplay}</td>
+    <td class="l">
+      <div class="font-semibold text-[13px] leading-tight">${row.entry.name}</div>
+    </td>
+    ${picksByTier.map(p => `<td class="l">${pickCellHtml(p)}</td>`).join('')}
+    <td class="num text-[11px] text-ink3 dark:text-dink3">${row.droppedTier}</td>
+    <td class="num text-[11px] text-ink3 dark:text-dink3">R${row.minPlayed}</td>
+    <td class="num text-[11px] text-ink2 dark:text-dink2">${fmtToPar(row.entry.tiebreaker)}</td>
+    <td class="num font-bold text-[16px] ${totalCls}">${fmtToPar(row.total)}</td>
+  </tr>`;
+}
+
+function render(rows, tournament) {
+  // Stats strip
+  document.getElementById('stat-round').textContent  = tournament?.round ? `${tournament.round}/4` : '—';
+  document.getElementById('stat-cut').textContent    = rows[0]?._cutPenalty != null ? fmtToPar(rows[0]._cutPenalty) : '—';
+  document.getElementById('stat-entries').textContent = rows.length;
+  const totalLive = rows.reduce((a, r) => a + r.livePicks, 0);
+  document.getElementById('stat-live').textContent = totalLive;
+
+  // Mobile cards
+  document.getElementById('cardStack').innerHTML = rows.map(cardHtml).join('');
+  // Desktop table
+  document.getElementById('lbBody').innerHTML = rows.map(tableRowHtml).join('');
+
+  // Live label
+  const liveLabel = tournament?.statusDescription || (totalLive > 0 ? 'Live' : 'Idle');
+  document.getElementById('liveLabel').textContent = liveLabel.replace('Round ', 'R').slice(0, 16);
+}
+
+function formatUpdatedAt(at) {
+  const mins = Math.floor((Date.now() - at) / 60000);
+  if (mins < 1) return 'just now';
+  return mins + 'm ago';
+}
+
+//============================================================================
+// Boot
+//============================================================================
+const urlParams = new URLSearchParams(window.location.search);
+const pin = urlParams.get('pin');
+let fetchedAt = Date.now();
+
+async function boot() {
+  const [scoresResult, supaEntries] = await Promise.all([
+    fetchScores(),
+    fetchSupabaseEntries(pin),
+  ]);
+
+  const tournament = scoresResult.tournament;
+  const players    = scoresResult.players;
+  const entries    = supaEntries && supaEntries.length ? supaEntries : makePlaceholderEntries(74);
+  const isPlaceholder = !supaEntries || !supaEntries.length;
+
+  // Show/hide placeholder banner
+  document.getElementById('placeholderBanner').style.display = isPlaceholder ? '' : 'none';
+
+  const scoreIdx = buildScoreIndex(players);
+  const cutPenaltyVal = computeCutPenalty(players);
+  const rows = entries.map(e => entryStats(e, scoreIdx, cutPenaltyVal));
+  rows.forEach(r => r._cutPenalty = cutPenaltyVal);
+  rankStandings(rows);
+
+  fetchedAt = Date.now();
+  document.getElementById('updatedLabel').textContent = formatUpdatedAt(fetchedAt);
+  render(rows, tournament);
+
+  // Schedule a refresh of the timestamp label every 20s
+  setInterval(() => {
+    document.getElementById('updatedLabel').textContent = formatUpdatedAt(fetchedAt);
+  }, 20000);
+}
+
+document.getElementById('refreshBtn').addEventListener('click', () => {
+  document.getElementById('updatedLabel').textContent = 'refreshing…';
+  boot();
+});
+
+boot().catch(err => {
+  console.error('Boot failed:', err);
+  document.getElementById('updatedLabel').textContent = 'load failed';
+});
+</script>
+</body>
+</html>
