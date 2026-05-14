@@ -86,7 +86,27 @@ CREATE TABLE entries (
 -- The policies only cover INSERT and UPDATE — those are the actions
 -- the lock prevents.
 --
+-- Pre-existing permissive policies are dropped explicitly because Postgres
+-- RLS combines policies with OR semantics — leaving a `USING (true)` policy
+-- in place would silently bypass the lock-aware policies below. Production
+-- shipped initially with the lock visibly enabled in the UI but writes still
+-- accepted server-side; the cleanup drops were added to schema.sql after the
+-- fact so any environment re-applying this file ends up in the same four-
+-- policy state (entries_read_all, entries_delete_all,
+-- entries_insert_when_unlocked_or_commissioner,
+-- entries_update_when_unlocked_or_commissioner).
+--
 -- Apply to Supabase dashboard (SQL editor):
+--
+--   -- Drop legacy / orphan policies first so the policy set is clean before
+--   -- RLS is enabled. Names below cover the policies that existed in our
+--   -- production database pre-3.2 plus an orphan from a 3.2-development
+--   -- iteration; harmless on environments where they don't exist.
+--   DROP POLICY IF EXISTS "entries_insert"      ON entries;
+--   DROP POLICY IF EXISTS "entries_update"      ON entries;
+--   DROP POLICY IF EXISTS "entries_public_read" ON entries;
+--   DROP POLICY IF EXISTS "entries_delete"      ON entries;
+--   DROP POLICY IF EXISTS "entries_write_when_unlocked_or_commissioner" ON entries;
 --
 --   ALTER TABLE entries ENABLE ROW LEVEL SECURITY;
 --

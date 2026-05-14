@@ -364,6 +364,16 @@ Need a way to mark a pool as "settled" so winnings count (otherwise mid-tourname
 
 ---
 
+## Auth UX follow-ups (post-3.1a / 3.2)
+
+Surfaced during phase 3.2 manual testing and a related orphaned-anonymous-user incident. None block the current shipped flow; all are durable fixes for known sharp edges.
+
+- [ ] **Magic-link email previewer hardening.** Apple Mail's "Protect Mail Activity" (and HEY / iCloud / corporate spam filters) pre-fetches incoming links, consuming the one-time token before the user clicks. Short-term: warn in the sign-in modal copy ("If the link looks expired when you click it, copy and paste it into your browser instead" — partially done in `handleSignIn`'s success copy, but the trigger condition is not surfaced in the email itself). Durable: switch from clickable-link to typed-OTP-code flow via `signInWithOtp` (already used) + `verifyOtp` against the 6-digit code Supabase also includes in the email. Eliminates the previewer attack surface entirely since there is no URL to pre-fetch.
+- [ ] **Supabase email template customization.** First-time claim emails go through Supabase's "Confirm Email Change" template because we use `updateUser({ email })`. Default subject reads "Change Email" — misleading for first-time claimers. Manual dashboard step (Authentication → Email Templates) flagged in phase 3 acceptance criteria; still outstanding in production. Customise the subject and body to match the in-app copy ("Save your pools to this email").
+- [ ] **Orphan recovery runbook.** Document the SQL pattern for reparenting `user_pools` rows from an orphaned anonymous user to a claimed user when the silent OTP fallback strands data. The pattern is small but easy to get wrong: the destination row may already exist, so a plain `UPDATE` violates the `(user_id, pool_id)` primary key. Pattern is roughly `INSERT … ON CONFLICT DO UPDATE` from the orphan rows, then `DELETE` the orphan. Either a `RECOVERY.md` or a CLAUDE.md section is fine. One commissioner pool already hit this; will recur.
+
+---
+
 ## Out of scope (explicit non-goals)
 
 - Multi-user switcher on a shared device

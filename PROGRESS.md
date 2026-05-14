@@ -176,5 +176,6 @@ Acceptance criteria — all passed (see `tests/manual/phase-3.2.md` for the full
 ## Open / upcoming
 
 - **Auth phases 2, 3.1b, 4, 5** — entry linking, orphan name-match claim, commissioner migration, leagues (see PLAN_AUTH.md)
+- **Auth UX follow-ups** — magic-link previewer warning, email template customization, orphan recovery runbook (see PLAN_AUTH.md "Auth UX follow-ups" section)
 - **Season-long scoring** — multi-week / multi-major cumulative leaderboard. Entries persist across events; scores accumulate over the season. Schema and UI TBD.
 - **Golfball mascot** — a golfball character who drinks and smokes. Vibes TBD.
