@@ -1,5 +1,14 @@
 # The Major Pool — Project Hand-off
 
+> **Status: HISTORICAL.** This was the original hand-off brief asking Claude
+> Code to produce a code audit before any feature work. The audit (`AUDIT.md`)
+> and all its follow-up items have shipped. For the current state of the
+> project, start with `CLAUDE.md`, then `PROGRESS.md` and `PLAN_AUTH.md`.
+> The "Roadmap context" section below is partially outdated — pool admin
+> tools (lock picks at deadline) shipped in auth phase 3.2, and historical
+> pool tracking is being implemented as "Leagues + lifetime winnings" in
+> `PLAN_AUTH.md` phase 5.
+
 Welcome. This is a working golf pool web app deployed at https://putalittledrawonit.netlify.app. It was built iteratively over two tournaments (2026 Masters, then expanded for the Zurich Classic and Cadillac Championship). The owner (Kee) is now moving from chat-based development to Claude Code for ongoing work.
 
 Your first job is **not** to add features. It's to read the codebase, understand the architecture, and produce a written audit. Once Kee reviews the audit, we'll plan next steps together.

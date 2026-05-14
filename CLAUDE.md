@@ -6,9 +6,15 @@ Golf major pool app. Single-file frontend (`index.html`), Netlify Function ESPN 
 
 ## Key docs
 
-- `AUDIT.md` — canonical backlog and architecture notes
-- `PROGRESS.md` — what's been completed, what's still open
-- `README.md` — setup, scoring rules, schema, proxy params
+- `PLAN_AUTH.md` — active migration plan (auth, hub, leagues). Phase status
+  is the source of truth for what's next.
+- `PROGRESS.md` — shipped work, commit hashes, and acceptance criteria.
+  Also lists Open / upcoming at the bottom.
+- `README.md` — setup, scoring rules, schema, proxy params.
+- `AUDIT.md` — historical baseline review (May 2026). All items shipped;
+  preserved for context.
+- `CLAUDE_CODE_HANDOFF.md` — historical first-day brief. Some architectural
+  gotchas in there are still relevant, but treat as background reading.
 
 ## Running tests
 

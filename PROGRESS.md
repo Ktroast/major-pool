@@ -116,8 +116,8 @@ Merged on branch `phase-3-claim-flow`. Adds the sign-in / claim flow — anonymo
 | UX: unify modal under single intent (silent OTP fallback) | ba66100 |
 | Fix: syntax error in handleSignIn (curly quotes) | 7cb6030 |
 
-Manual steps required before production:
-- Supabase dashboard → Authentication → Email Templates → customize "Confirm Email Change" template to read "Confirm your email" (first-time claimers see "Change Email" subject otherwise — misleading but functional).
+Production config (applied):
+- Supabase dashboard → Authentication → Email Templates → first-time-claim template customized. (Default Supabase copy is misleading for first-time claimers since we use `updateUser({ email })`. See CLAUDE.md "Account claiming (phase 3)" → "Email template" for the intended copy — that's the single source of truth.)
 
 Acceptance criteria — all passed:
 - [x] Anonymous user with pools sees Sign in link in hub header

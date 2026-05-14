@@ -1,5 +1,11 @@
 # Codebase Audit — The Major Pool
 
+> **Status: HISTORICAL.** Every item in this audit was completed in May 2026 —
+> see `PROGRESS.md` for the commit-by-commit shipping log. This document is
+> preserved as the original baseline review; do not treat its priorities or
+> "open" items as current. For the current backlog, see `PLAN_AUTH.md`
+> (active migration) and `PROGRESS.md` (Open / upcoming section).
+
 _Produced by Claude Code, May 2026. Do not make code changes until Kee reviews this._
 
 ---

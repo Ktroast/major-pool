@@ -145,18 +145,28 @@ Overrides always win over ESPN-sourced data. Set them on the **Scores tab**.
 
 ```
 major-pool/
-├── index.html                          # Entire frontend — HTML + CSS + JS
+├── index.html                          # Entire frontend — HTML + JS
 ├── style.css                           # Extracted stylesheet
+├── manifest.json                       # PWA manifest
+├── netlify.toml                        # Netlify build + functions config
 ├── netlify/
 │   └── functions/
 │       └── golf-leaderboard.js         # ESPN proxy (CommonJS Netlify Function)
+├── supabase/
+│   └── schema.sql                      # Postgres schema, RLS policies, migrations
 ├── tests/
-│   ├── normalize.test.js               # Proxy unit tests (node:test, no dependencies)
+│   ├── normalize.test.js               # Proxy unit tests (node:test, no deps)
 │   ├── scoring.test.js                 # Scoring engine unit tests
 │   ├── matching.test.js                # Fuzzy name matching unit tests
-│   └── helpers/
-│       └── load-scoring.js             # Extracts scoring fns from index.html for tests
-├── netlify.toml                        # Netlify build + functions config
-├── AUDIT.md                            # Code audit with refactor recommendations
-└── CLAUDE_CODE_HANDOFF.md              # Architecture notes and feature roadmap
+│   ├── helpers/
+│   │   └── load-scoring.js             # Extracts scoring fns from index.html
+│   └── manual/
+│       └── phase-3.2.md                # Manual test walkthroughs
+├── package.json                        # Dev-only deps (sharp for image tooling)
+├── README.md                           # This file
+├── CLAUDE.md                           # Current project context for AI sessions
+├── PROGRESS.md                         # Shipped work + acceptance criteria
+├── PLAN_AUTH.md                        # Active auth/hub/leagues migration plan
+├── AUDIT.md                            # Historical — original code audit (May 2026)
+└── CLAUDE_CODE_HANDOFF.md              # Historical — initial AI hand-off brief
 ```
