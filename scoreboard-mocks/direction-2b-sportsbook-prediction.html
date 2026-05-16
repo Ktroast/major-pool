@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Major Pool · Markets · The 2026 Masters</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg:        #0a0f1a;
+    --bg-2:      #0f1623;
+    --panel:     #121a29;
+    --panel-2:   #18213381;
+    --hairline:  #1f2a3f;
+    --hairline2: #2a3a55;
+    --ink:       #e7edf7;
+    --ink-dim:   #8a99b8;
+    --ink-faint: #5a6783;
+    --accent:    #5ec1ff;
+    --accent-hi: #8ed7ff;
+    --yes:       #4ade80;
+    --yes-dim:   rgba(74,222,128,0.16);
+    --no:        #f87171;
+    --no-dim:    rgba(248,113,113,0.16);
+    --amber:     #fbbf24;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 0%, rgba(94,193,255,0.05) 0%, transparent 70%),
+      var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  /* Top bar */
+  .topbar {
+    position: sticky; top: 0; z-index: 30;
+    background: rgba(10,15,26,0.85);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--hairline);
+  }
+  .topbar-inner {
+    max-width: 1180px; margin: 0 auto;
+    padding: 12px 22px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .brand {
+    font-weight: 700; font-size: 15px;
+    letter-spacing: -0.01em;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .brand::before {
+    content: ''; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+  }
+  .crumb {
+    font-size: 12px; color: var(--ink-dim);
+    letter-spacing: 0.02em;
+  }
+  .crumb .sep { color: var(--ink-faint); margin: 0 8px; }
+  .topbar-spacer { flex: 1; }
+  .top-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px;
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    font-size: 12px;
+    color: var(--ink-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.02em;
+  }
+  .live-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--yes);
+    box-shadow: 0 0 6px var(--yes);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse { 50% { opacity: 0.4; } }
+
+  /* Layout */
+  main { max-width: 1180px; margin: 0 auto; padding: 28px 22px 80px; }
+
+  /* Page header */
+  .hdr { margin-bottom: 18px; }
+  .market-id {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .h1 {
+    margin: 8px 0 6px;
+    font-size: clamp(28px, 4vw, 38px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .sub {
+    color: var(--ink-dim);
+    font-size: 14px;
+    letter-spacing: 0.01em;
+    max-width: 640px;
+  }
+
+  /* Market-stats strip */
+  .stats {
+    margin-top: 18px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+    padding: 14px 18px;
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+  }
+  .stat-label {
+    font-size: 11px;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+  }
+  .stat-value {
+    margin-top: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .stat-value.accent { color: var(--accent); }
+  .stat-value.yes { color: var(--yes); }
+  .stat-value.amber { color: var(--amber); }
+  .stat-value.no { color: var(--no); }
+  @media (max-width: 720px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* Section title */
+  .section-head {
+    margin: 36px 0 14px;
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  }
+  .section-title {
+    font-size: 18px; font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .section-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+  }
+
+  /* Headline market card — top 5 contenders */
+  .headline {
+    background:
+      linear-gradient(180deg, rgba(94,193,255,0.06) 0%, transparent 60%),
+      var(--panel);
+    border: 1px solid var(--hairline2);
+    border-radius: 14px;
+    padding: 22px;
+  }
+  .headline-q {
+    font-size: 13px; color: var(--ink-dim);
+    letter-spacing: 0.02em;
+    margin-bottom: 4px;
+  }
+  .headline-title {
+    font-size: 22px; font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-bottom: 18px;
+  }
+  .contenders {
+    display: grid; gap: 12px;
+  }
+  .ctr {
+    display: grid;
+    grid-template-columns: 28px 1fr auto 110px;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 12px;
+    background: var(--bg-2);
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 160ms ease, border-color 160ms ease;
+  }
+  .ctr:hover { background: #18223a; border-color: var(--hairline2); }
+  .ctr-rank {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    color: var(--ink-dim);
+    text-align: center;
+  }
+  .ctr.is-leader .ctr-rank { color: var(--accent); font-weight: 600; }
+  .ctr-name {
+    font-size: 15px; font-weight: 500;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .ctr-score {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    color: var(--ink-dim);
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.04);
+  }
+  .ctr-score.neg { color: var(--yes); background: var(--yes-dim); }
+  .ctr-score.pos { color: var(--no);  background: var(--no-dim); }
+  /* probability bar */
+  .prob {
+    position: relative;
+    width: 110px; height: 22px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 4px; overflow: hidden;
+  }
+  .prob-fill {
+    position: absolute; inset: 0 auto 0 0;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-hi) 100%);
+    border-radius: 4px;
+  }
+  .ctr.is-leader .prob-fill { background: linear-gradient(90deg, var(--yes) 0%, #86efac 100%); }
+  .prob-label {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: flex-end;
+    padding-right: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--ink);
+    mix-blend-mode: difference;
+    font-weight: 600;
+  }
+  @media (max-width: 560px) {
+    .ctr { grid-template-columns: 22px 1fr 70px 80px; gap: 8px; padding: 9px 10px; }
+    .prob { width: 80px; }
+  }
+
+  /* Order book — full standings */
+  .book {
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .book-cols {
+    display: grid;
+    grid-template-columns: 56px 1fr 88px 96px 90px 130px;
+    gap: 12px;
+    padding: 10px 18px;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--hairline);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+  }
+  .book-cols .right { text-align: right; }
+  .book-row {
+    display: grid;
+    grid-template-columns: 56px 1fr 88px 96px 90px 130px;
+    gap: 12px;
+    padding: 12px 18px;
+    align-items: center;
+    border-bottom: 1px solid var(--hairline);
+    transition: background 160ms ease;
+    cursor: pointer;
+  }
+  .book-row:last-child { border-bottom: none; }
+  .book-row:hover { background: rgba(94,193,255,0.04); }
+  .br-rank {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    color: var(--ink-dim);
+  }
+  .br-name { font-size: 15px; font-weight: 500;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .br-meta {
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--ink-faint);
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.04em;
+  }
+  .br-score {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: right;
+  }
+  .br-score.neg { color: var(--yes); }
+  .br-score.pos { color: var(--no); }
+  .br-score.even { color: var(--ink-dim); }
+  .br-volume {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--ink-dim);
+    text-align: right;
+  }
+  .br-trade {
+    display: flex; align-items: center; gap: 6px;
+    justify-content: flex-end;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+  }
+  .yesno {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 7px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+  }
+  .yesno.yes { color: var(--yes); background: var(--yes-dim); }
+  .yesno.no  { color: var(--no);  background: var(--no-dim); }
+  .br-prob {
+    width: 100%; height: 6px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 4px; overflow: hidden;
+    margin-top: 4px;
+  }
+  .br-prob-fill {
+    height: 100%; background: var(--accent);
+    border-radius: 4px;
+  }
+
+  @media (max-width: 820px) {
+    .book-cols, .book-row {
+      grid-template-columns: 40px 1fr 70px 80px;
+      gap: 10px;
+      padding: 12px 14px;
+    }
+    .book-cols .col-vol, .book-row .col-vol { display: none; }
+    .book-cols .col-trade, .book-row .col-trade { display: none; }
+  }
+
+  /* Round panel */
+  .panel {
+    grid-column: 1 / -1;
+    display: none;
+    margin-top: 12px;
+    padding: 14px;
+    background: var(--bg-2);
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+  }
+  .book-row.open + .panel { display: block; }
+  .pg {
+    display: grid;
+    grid-template-columns: 1fr 52px 52px 52px 52px 72px;
+    gap: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+  }
+  .pg .h {
+    font-size: 10px;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--hairline);
+    margin-bottom: 4px;
+  }
+  .pg .right { text-align: right; }
+  .pg .cell { padding: 3px 0; color: var(--ink); }
+  .pg .r-neg { color: var(--yes); }
+  .pg .r-pos { color: var(--no); }
+  .pg .r-dim { color: var(--ink-faint); }
+  .pg .pname {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .pg .dropped { opacity: 0.4; text-decoration: line-through; }
+  .tag {
+    display: inline-block; margin-left: 6px;
+    font-size: 10px; font-family: 'IBM Plex Mono', monospace;
+    padding: 1px 5px; border-radius: 3px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .tag-mc { color: var(--no);    background: var(--no-dim); }
+  .tag-wd { color: var(--amber); background: rgba(251,191,36,0.16); }
+  .tag-drop { color: var(--ink-faint); background: rgba(255,255,255,0.05); }
+  .tag-live { color: var(--yes); background: var(--yes-dim); }
+  .pg .total {
+    grid-column: 1 / 6;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    border-top: 1px solid var(--hairline);
+    padding-top: 8px;
+    margin-top: 4px;
+    text-align: right;
+  }
+  .pg .total-val {
+    border-top: 1px solid var(--hairline);
+    padding-top: 8px;
+    margin-top: 4px;
+    font-size: 16px;
+    color: var(--accent);
+    text-align: right;
+    font-weight: 600;
+  }
+  @media (max-width: 560px) {
+    .pg { grid-template-columns: 1fr 40px 40px 40px 40px 56px; font-size: 12px; gap: 6px; }
+  }
+
+  .foot {
+    margin-top: 28px;
+    text-align: center;
+    font-size: 12px; color: var(--ink-faint);
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.06em;
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <span class="brand">Major Pool</span>
+    <span class="crumb">Markets <span class="sep">/</span> 2026 Masters <span class="sep">/</span> Outright Winner</span>
+    <span class="topbar-spacer"></span>
+    <span class="top-pill"><span class="live-dot"></span>MARKET OPEN</span>
+    <span class="top-pill">PIN · MASTERS26</span>
+  </div>
+</header>
+
+<main>
+
+  <section class="hdr">
+    <div class="market-id">MKT-2026-MASTERS-OUTRIGHT</div>
+    <h1 class="h1">Who wins the pool?</h1>
+    <p class="sub">Live implied probabilities update every 5 minutes from current standings, remaining rounds, and the cut penalty. Probabilities sum to ~100%.</p>
+  </section>
+
+  <section class="stats">
+    <div><div class="stat-label">Round</div><div class="stat-value">3 / 4</div></div>
+    <div><div class="stat-label">Leader</div><div class="stat-value yes" id="stat-leader">—</div></div>
+    <div><div class="stat-label">Cut Penalty</div><div class="stat-value amber" id="stat-cut">—</div></div>
+    <div><div class="stat-label">Entries</div><div class="stat-value" id="stat-entries">—</div></div>
+    <div><div class="stat-label">Live Holes</div><div class="stat-value accent" id="stat-live">—</div></div>
+  </section>
+
+  <div class="section-head">
+    <div class="section-title">Top contenders</div>
+    <div class="section-meta">Live · top 5 implied</div>
+  </div>
+  <section class="headline">
+    <div class="headline-q">Headline market</div>
+    <div class="headline-title">Most likely to finish #1 when scoring closes</div>
+    <div class="contenders" id="contenders"></div>
+  </section>
+
+  <div class="section-head">
+    <div class="section-title">Order book</div>
+    <div class="section-meta">Full field · sorted by implied %</div>
+  </div>
+  <section class="book">
+    <div class="book-cols">
+      <span>Rank</span>
+      <span>Entry</span>
+      <span class="right">To Par</span>
+      <span class="right col-vol">Live Vol</span>
+      <span class="right">Implied %</span>
+      <span class="right col-trade">Market</span>
+    </div>
+    <div id="book"></div>
+  </section>
+
+  <div class="foot">All probabilities are derived from live scoring. No actual wagering — this is a friends' pool.</div>
+
+</main>
+
+<script src="data.js"></script>
+<script>
+  const { GOLFERS, PAR, standings, cutPenalty, fmtToPar, pickLabel } = window.MOCK;
+
+  // Implied probability from to-par + rounds remaining.
+  // Closer to leader = exponentially more likely.
+  // Sum normalized to 100%.
+  function computeProbabilities(rows) {
+    const leader = rows[0].toPar;
+    // Weight: how many strokes back, with a soft falloff.
+    // Live picks get a small bump (more variance still in play).
+    const raw = rows.map(r => {
+      const back = r.toPar - leader;
+      const liveBonus = r.livePicks > 0 ? 0.4 : 0;
+      // sharp falloff per stroke behind
+      return Math.exp(-back * 0.85 + liveBonus);
+    });
+    const sum = raw.reduce((a, b) => a + b, 0);
+    return raw.map(v => (v / sum) * 100);
+  }
+
+  function fmtPct(p) {
+    if (p >= 10) return p.toFixed(1) + '%';
+    if (p >= 1)  return p.toFixed(1) + '%';
+    if (p >= 0.1) return p.toFixed(2) + '%';
+    return '<0.1%';
+  }
+
+  function scoreClass(n) {
+    if (n === 0) return 'even';
+    return n < 0 ? 'neg' : 'pos';
+  }
+
+  function contenderHtml(row, p, idx) {
+    const cls = `ctr ${idx === 0 ? 'is-leader' : ''}`;
+    const pctWidth = Math.max(3, p);
+    return `
+      <div class="${cls}">
+        <span class="ctr-rank">${idx + 1}</span>
+        <span class="ctr-name">${row.entry.name}</span>
+        <span class="ctr-score ${scoreClass(row.toPar)}">${fmtToPar(row.toPar)}</span>
+        <span class="prob" title="${fmtPct(p)} implied">
+          <span class="prob-fill" style="width:${Math.min(100, pctWidth)}%"></span>
+          <span class="prob-label">${fmtPct(p)}</span>
+        </span>
+      </div>
+    `;
+  }
+
+  function bookRowHtml(row, p) {
+    const sc = scoreClass(row.toPar);
+    const vol = row.livePicks > 0
+      ? `<span style="color:var(--yes)">${row.liveHolesLeft}H</span>`
+      : `<span>—</span>`;
+    const trade = p >= 5
+      ? `<span class="yesno yes">YES · ${(p/100).toFixed(2)}</span>`
+      : `<span class="yesno no">NO · ${((100-p)/100).toFixed(2)}</span>`;
+    return `
+      <div class="book-row" data-id="${row.entry.id}" role="row" tabindex="0">
+        <span class="br-rank">${row.posDisplay}</span>
+        <span>
+          <div class="br-name">${row.entry.name}</div>
+          <div class="br-meta">${row.picks.length} picks · TB ${fmtToPar(row.entry.tiebreaker)}</div>
+        </span>
+        <span class="br-score ${sc}">${fmtToPar(row.toPar)}</span>
+        <span class="br-volume col-vol">${vol}</span>
+        <span>
+          <div class="br-score" style="font-size:13px;color:var(--accent)">${fmtPct(p)}</div>
+          <div class="br-prob"><span class="br-prob-fill" style="width:${Math.min(100, Math.max(2, p))}%"></span></div>
+        </span>
+        <span class="br-trade col-trade">${trade}</span>
+      </div>
+      <div class="panel">${panelHtml(row)}</div>
+    `;
+  }
+
+  function panelHtml(row) {
+    const picks = [...row.picks].sort((a, b) => a.sum - b.sum);
+    const droppedRank = row.droppedRank;
+    const cell = (n, status) => {
+      if (status === 'mc' || status === 'wd') return `<span class="cell r-dim">—</span>`;
+      if (n === null || n === undefined) return `<span class="cell r-dim">—</span>`;
+      const c = n < 0 ? 'r-neg' : n > 0 ? 'r-pos' : '';
+      return `<span class="cell ${c}">${fmtToPar(n)}</span>`;
+    };
+    const rows = picks.map(p => {
+      const lbl = pickLabel(p);
+      const tag = lbl
+        ? `<span class="tag tag-${lbl.toLowerCase()}">${lbl}</span>`
+        : p.live ? `<span class="tag tag-live">LIVE</span>`
+        : (p.rank === droppedRank ? `<span class="tag tag-drop">DROP</span>` : '');
+      const dropCls = p.rank === droppedRank ? 'dropped' : '';
+      const last = p.name.split(' ').slice(-1)[0];
+      const sumCls = p.sum < 0 ? 'r-neg' : p.sum > 0 ? 'r-pos' : '';
+      return `
+        <span class="cell pname ${dropCls}">${last}${tag}</span>
+        ${cell(p.rounds[0], p.status)}
+        ${cell(p.rounds[1], p.status)}
+        ${cell(p.rounds[2], p.status)}
+        ${cell(p.rounds[3], p.status)}
+        <span class="cell right ${sumCls} ${dropCls}">${fmtToPar(p.sum)}</span>
+      `;
+    }).join('');
+    return `
+      <div class="pg">
+        <span class="h">Player</span>
+        <span class="h right">R1</span>
+        <span class="h right">R2</span>
+        <span class="h right">R3</span>
+        <span class="h right">R4</span>
+        <span class="h right">Sum</span>
+        ${rows}
+        <span class="total">Best 4 of 5 · Team total</span>
+        <span class="total-val">${fmtToPar(row.toPar)}</span>
+      </div>
+    `;
+  }
+
+  function render() {
+    const rows = standings();
+    const probs = computeProbabilities(rows);
+
+    document.getElementById('stat-leader').textContent = fmtToPar(rows[0].toPar);
+    document.getElementById('stat-cut').textContent = fmtToPar(cutPenalty());
+    document.getElementById('stat-entries').textContent = rows.length;
+    document.getElementById('stat-live').textContent =
+      rows.reduce((a, r) => a + r.liveHolesLeft, 0);
+
+    document.getElementById('contenders').innerHTML =
+      rows.slice(0, 5).map((r, i) => contenderHtml(r, probs[i], i)).join('');
+    document.getElementById('book').innerHTML =
+      rows.map((r, i) => bookRowHtml(r, probs[i])).join('');
+
+    bindRows();
+  }
+
+  let openId = null;
+  function bindRows() {
+    document.querySelectorAll('.book-row').forEach(r => {
+      r.addEventListener('click', () => toggleRow(r));
+      r.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleRow(r); }
+        else if (e.key === 'Escape') {
+          const open = document.querySelector('.book-row.open');
+          if (open) { open.classList.remove('open'); openId = null; }
+        }
+      });
+    });
+    if (openId) {
+      const r = document.querySelector(`.book-row[data-id="${openId}"]`);
+      if (r) r.classList.add('open');
+      else openId = null;
+    }
+  }
+  function toggleRow(r) {
+    const id = r.dataset.id;
+    document.querySelectorAll('.book-row.open').forEach(o => {
+      if (o !== r) o.classList.remove('open');
+    });
+    const willOpen = !r.classList.contains('open');
+    r.classList.toggle('open', willOpen);
+    openId = willOpen ? id : null;
+  }
+
+  render();
+</script>
+</body>
+</html>
