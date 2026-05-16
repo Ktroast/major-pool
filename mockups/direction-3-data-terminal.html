@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MAJOR_POOL // MASTERS_26 // TERMINAL</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:         #0A0E1A;
+    --bg-row:     #0F1421;
+    --bg-row-alt: #0C1019;
+    --bg-hover:   #1A2238;
+    --grid:       #1A2238;
+    --hairline:   #1F2A44;
+    --text:       #E5E7EB;
+    --text-dim:   #94A3B8;
+    --text-faint: #475569;
+    --amber:      #FBBF24;
+    --amber-dim:  #D97706;
+    --green:      #34D399;
+    --red:        #F87171;
+    --blue:       #60A5FA;
+    --magenta:    #C084FC;
+  }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Fira Sans', sans-serif;
+    font-size: 13px;
+    min-height: 100vh;
+  }
+  .mono { font-family: 'Fira Code', monospace; font-variant-ligatures: none; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .text-dim { color: var(--text-dim); }
+  .text-faint { color: var(--text-faint); }
+
+  /* Live indicator: terminal-style amber blink */
+  .live-blink {
+    display: inline-block;
+    width: 7px; height: 11px;
+    background: var(--amber);
+    margin-right: 6px;
+    animation: blink 1s steps(2, end) infinite;
+    vertical-align: middle;
+  }
+  @keyframes blink { 50% { opacity: 0.15; } }
+  @media (prefers-reduced-motion: reduce) { .live-blink { animation: none; opacity: 0.85; } }
+
+  /* Tier labels - minimal mono codes */
+  .tier-tag {
+    display: inline-block;
+    font-family: 'Fira Code', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 4px;
+    border-radius: 2px;
+    letter-spacing: 0.04em;
+  }
+  .tier-A { background: rgba(251, 191, 36, 0.12); color: #FBBF24; }
+  .tier-B { background: rgba(96, 165, 250, 0.12); color: #60A5FA; }
+  .tier-C { background: rgba(167, 139, 250, 0.12); color: #A78BFA; }
+  .tier-D { background: rgba(52, 211, 153, 0.12); color: #34D399; }
+  .tier-E { background: rgba(148, 163, 184, 0.12); color: #94A3B8; }
+
+  /* Scores */
+  .s-neg { color: var(--amber); font-weight: 600; }
+  .s-pos { color: var(--text); }
+  .s-par { color: var(--text-dim); }
+  .s-bad { color: var(--red); }
+  .s-good { color: var(--green); }
+
+  /* Dropped */
+  .drop { color: var(--text-faint); position: relative; }
+  .drop::after {
+    content: ''; position: absolute; left: 0; right: 0; top: 50%;
+    height: 1px; background: var(--text-faint);
+  }
+
+  /* Row */
+  .lb-row {
+    display: grid;
+    grid-template-columns: 32px 12px 1fr 60px 60px 60px 60px 60px 32px 50px 56px;
+    gap: 6px;
+    padding: 6px 12px;
+    border-left: 2px solid transparent;
+    transition: background-color 80ms linear;
+    cursor: pointer;
+  }
+  .lb-row:nth-child(even) { background: var(--bg-row-alt); }
+  .lb-row:nth-child(odd)  { background: var(--bg-row); }
+  .lb-row:hover { background: var(--bg-hover); border-left-color: var(--amber); }
+  .lb-row.is-live { border-left-color: var(--amber-dim); }
+
+  /* Header row */
+  .lb-head {
+    display: grid;
+    grid-template-columns: 32px 12px 1fr 60px 60px 60px 60px 60px 32px 50px 56px;
+    gap: 6px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--hairline);
+    border-top: 1px solid var(--hairline);
+    background: #060912;
+    position: sticky;
+    top: 56px;
+    z-index: 20;
+  }
+
+  /* Filter chips */
+  .chip {
+    border: 1px solid var(--hairline);
+    background: var(--bg-row);
+    color: var(--text-dim);
+    padding: 3px 10px;
+    border-radius: 2px;
+    font-family: 'Fira Code', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+  .chip:hover { color: var(--text); border-color: var(--text-dim); }
+  .chip.active { color: var(--amber); border-color: var(--amber-dim); background: rgba(251, 191, 36, 0.06); }
+
+  /* Sparkline-ish stat block */
+  .stat {
+    border: 1px solid var(--hairline);
+    background: var(--bg-row);
+    padding: 8px 12px;
+  }
+  .stat-label { font-size: 10px; color: var(--text-faint); letter-spacing: 0.06em; text-transform: uppercase; }
+  .stat-val   { font-family: 'Fira Code', monospace; font-size: 18px; font-weight: 600; margin-top: 2px; }
+
+  /* Cell heads */
+  .cell-h { font-size: 10px; color: var(--text-faint); letter-spacing: 0.08em; text-transform: uppercase; font-family: 'Fira Code', monospace; }
+
+  /* Search input */
+  input[type="text"] {
+    background: var(--bg-row);
+    border: 1px solid var(--hairline);
+    color: var(--text);
+    padding: 4px 10px;
+    font-family: 'Fira Code', monospace;
+    font-size: 12px;
+    border-radius: 2px;
+    outline: none;
+    transition: border-color 100ms ease;
+  }
+  input[type="text"]:focus { border-color: var(--amber-dim); }
+  input[type="text"]::placeholder { color: var(--text-faint); }
+</style>
+</head>
+<body>
+
+  <!-- Top status bar -->
+  <header class="sticky top-0 z-30 bg-[#060912] border-b border-[var(--hairline)]">
+    <div class="max-w-[1400px] mx-auto px-4 py-2 flex items-center gap-4 flex-wrap text-xs">
+      <div class="mono font-semibold text-[var(--amber)]">MAJOR_POOL</div>
+      <span class="text-faint">//</span>
+      <div class="mono text-dim">MASTERS_26 · R3 · LIVE</div>
+      <span class="text-faint">//</span>
+      <div class="mono text-dim">PIN <span class="text-[var(--text)]">MASTERS26</span></div>
+      <span class="text-faint">//</span>
+      <div class="mono text-dim">FORMAT <span class="text-[var(--text)]">BEST_4_OF_5</span> · LOW</div>
+      <div class="ml-auto flex items-center gap-3 text-faint mono">
+        <span class="flex items-center gap-1.5"><span class="live-blink"></span><span class="text-[var(--amber)]">LIVE</span></span>
+        <span class="text-faint">·</span>
+        <span>REFRESH 02:13</span>
+        <span class="text-faint">·</span>
+        <span>14:47 ET</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- KPI strip -->
+  <section class="max-w-[1400px] mx-auto px-4 pt-4">
+    <div class="grid grid-cols-2 md:grid-cols-6 gap-2">
+      <div class="stat">
+        <div class="stat-label">Leader</div>
+        <div class="stat-val s-neg" id="kpi-leader">-18</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Median</div>
+        <div class="stat-val tabular" id="kpi-median">-5</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Cut Line</div>
+        <div class="stat-val s-pos tabular">+3</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Live Entries</div>
+        <div class="stat-val tabular"><span class="text-[var(--amber)]" id="kpi-live">11</span><span class="text-faint">/74</span></div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Round</div>
+        <div class="stat-val tabular">3<span class="text-faint">/4</span></div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Spread</div>
+        <div class="stat-val tabular">26 <span class="text-faint text-xs">strokes</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Filter row -->
+  <section class="max-w-[1400px] mx-auto px-4 py-3 flex items-center gap-2 flex-wrap">
+    <span class="cell-h">FILTER</span>
+    <button class="chip active" data-filter="all">ALL · 74</button>
+    <button class="chip" data-filter="live">LIVE</button>
+    <button class="chip" data-filter="top10">TOP 10</button>
+    <button class="chip" data-filter="contention">SUB-PAR</button>
+    <button class="chip" data-filter="cut">HAS_CUT</button>
+    <div class="ml-auto flex items-center gap-2">
+      <span class="cell-h">QUERY</span>
+      <input id="search" type="text" placeholder="entry or golfer…" class="w-64" />
+    </div>
+  </section>
+
+  <!-- Leaderboard table -->
+  <section class="max-w-[1400px] mx-auto px-4 pb-16">
+    <!-- Header -->
+    <div class="lb-head cell-h">
+      <div class="text-right">POS</div>
+      <div></div>
+      <div>ENTRY · ROSTER</div>
+      <div class="text-right">A</div>
+      <div class="text-right">B</div>
+      <div class="text-right">C</div>
+      <div class="text-right">D</div>
+      <div class="text-right">E</div>
+      <div class="text-right">DRP</div>
+      <div class="text-right">THRU</div>
+      <div class="text-right">TOT</div>
+    </div>
+
+    <!-- Rows -->
+    <div id="leaderboard"></div>
+
+    <div class="mt-3 text-[11px] text-faint mono px-2">
+      <span class="text-[var(--text-dim)]">[</span>strike<span class="text-[var(--text-dim)]">]</span> = dropped (lowest of 5, not counted)
+      &nbsp;<span class="text-[var(--text-dim)]">|</span>&nbsp;
+      <span class="live-blink"></span> live · still on the course
+      &nbsp;<span class="text-[var(--text-dim)]">|</span>&nbsp;
+      hover row to inspect
+    </div>
+  </section>
+
+<script>
+  // ── Shared seeded data generator ─────────────────────────────────────
+  const golfersByTier = {
+    A: ['Scottie Scheffler','Rory McIlroy','Jon Rahm','Xander Schauffele','Collin Morikawa','Viktor Hovland','Ludvig Åberg','Bryson DeChambeau'],
+    B: ['Patrick Cantlay','Justin Thomas','Wyndham Clark','Tony Finau','Sahith Theegala','Hideki Matsuyama','Tommy Fleetwood','Brooks Koepka'],
+    C: ['Sungjae Im','Jordan Spieth','Cameron Smith','Russell Henley','Sepp Straka','Tom Kim','Sam Burns','Joaquin Niemann'],
+    D: ['Min Woo Lee','Akshay Bhatia','Robert MacIntyre','Maverick McNealy','Si Woo Kim','Adam Scott','Corey Conners','Eric Cole'],
+    E: ['Justin Rose','Chris Kirk','Stephan Jaeger','Davis Thompson','Taylor Pendrith','Erik van Rooyen','Mackenzie Hughes','J.T. Poston']
+  };
+  const firstNames = ['Keenan','Mike','Sarah','Tom','Alex','Jamie','Pat','Chris','Ryan','Drew','Kate','Ben','Jess','Sam','Will','Andy','Megan','Luke','Owen','Beth','Nate','Liz','Joe','Maddy','Connor','Ethan','Hannah','Ian','Jordan','Kyle','Logan','Mia','Noah','Olivia','Quinn','Riley','Tyler','Vince','Wes','Zoe','Abby','Brian','Cara','Dan','Erin','Finn','Gus','Holly','Ivy','Jake','Kim','Leo','Mark','Nick','Paige','Reese','Scott','Theo','Uma','Vera','Wendy','Cody','Brooke','Hugo','Iris','Casey','Lane','Reid','Pearl','Asa','Mel','Rob','Tess','Vic'];
+
+  function mulberry32(seed){let a=seed;return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+  const rand = mulberry32(42);
+  const pick = arr => arr[Math.floor(rand()*arr.length)];
+
+  function generateTeams() {
+    const teams = [];
+    const usedPairs = new Set();
+    for (let i = 0; i < 74; i++) {
+      let p1, p2, key;
+      do { p1 = pick(firstNames); p2 = pick(firstNames); key = [p1,p2].sort().join('|'); }
+      while (p1 === p2 || usedPairs.has(key));
+      usedPairs.add(key);
+      const golfers = ['A','B','C','D','E'].map(tier => ({ tier, name: pick(golfersByTier[tier]) }));
+      const frac = i / 73;
+      const targetTotal = -18 + frac * 26 + (rand() - 0.5) * 3;
+      golfers.forEach(g => {
+        g.score = Math.round(targetTotal / 4 + (rand() - 0.5) * 6);
+        g.cut = rand() < 0.06;
+        if (g.cut) g.score = Math.max(g.score, 4) + 6;
+      });
+      let dropIdx = 0;
+      golfers.forEach((g, k) => { if (g.score > golfers[dropIdx].score) dropIdx = k; });
+      const counted = golfers.filter((_, k) => k !== dropIdx);
+      const total = counted.reduce((s, g) => s + g.score, 0);
+      const isLive = rand() < 0.18;
+      teams.push({ players: [p1, p2], golfers, dropIdx, total, isLive, thru: isLive ? 10 + Math.floor(rand()*8) : 18 });
+    }
+    teams.sort((a, b) => a.total - b.total);
+    teams.forEach((t, i) => t.rank = i + 1);
+    return teams;
+  }
+
+  const teams = generateTeams();
+  const fmt = n => n > 0 ? '+' + n : (n === 0 ? 'E' : String(n));
+  const cls = n => n < 0 ? 's-neg' : (n > 0 ? 's-pos' : 's-par');
+
+  // KPI: live count + median
+  const liveCount = teams.filter(t => t.isLive).length;
+  document.getElementById('kpi-live').textContent = liveCount;
+  const sortedTotals = teams.map(t => t.total).sort((a, b) => a - b);
+  document.getElementById('kpi-median').textContent = fmt(sortedTotals[Math.floor(sortedTotals.length / 2)]);
+
+  // ── Render leaderboard ────────────────────────────────────────────────
+  const lbEl = document.getElementById('leaderboard');
+  let activeFilter = 'all';
+  let query = '';
+
+  function applyFilters() {
+    let rows = teams;
+    if (activeFilter === 'live') rows = rows.filter(t => t.isLive);
+    else if (activeFilter === 'top10') rows = rows.filter(t => t.rank <= 10);
+    else if (activeFilter === 'contention') rows = rows.filter(t => t.total < 0);
+    else if (activeFilter === 'cut') rows = rows.filter(t => t.golfers.some(g => g.cut));
+    if (query) {
+      const q = query.toLowerCase();
+      rows = rows.filter(t =>
+        t.players.some(p => p.toLowerCase().includes(q)) ||
+        t.golfers.some(g => g.name.toLowerCase().includes(q))
+      );
+    }
+    return rows;
+  }
+
+  function golferShort(name) {
+    const parts = name.split(' ');
+    const last = parts.pop();
+    const first = parts[0] ? parts[0][0] + '.' : '';
+    return `${first} ${last}`;
+  }
+
+  function renderLB() {
+    const rows = applyFilters();
+    lbEl.innerHTML = rows.map(t => {
+      const rosterShort = t.golfers.map(g => golferShort(g.name)).join(' · ');
+      return `
+        <div class="lb-row mono ${t.isLive ? 'is-live' : ''}">
+          <div class="text-right tabular text-dim">${String(t.rank).padStart(2, ' ')}</div>
+          <div>${t.isLive ? '<span class="live-blink"></span>' : ''}</div>
+          <div class="min-w-0">
+            <div class="text-[var(--text)] truncate">${t.players.join(' & ')}</div>
+            <div class="text-faint text-[11px] truncate">${rosterShort}</div>
+          </div>
+          ${t.golfers.map((g, k) => `
+            <div class="text-right tabular ${k === t.dropIdx ? 'drop' : cls(g.score)}">
+              <span class="tier-tag tier-${g.tier} mr-0.5">${g.tier}</span>${fmt(g.score)}${g.cut ? '<span class="text-[var(--red)] text-[10px] ml-0.5">CUT</span>' : ''}
+            </div>
+          `).join('')}
+          <div class="text-right text-faint text-[11px]">${t.golfers[t.dropIdx].tier}</div>
+          <div class="text-right tabular ${t.thru === 18 ? 'text-dim' : 'text-[var(--amber)]'}">${t.thru === 18 ? 'F' : String(t.thru).padStart(2, ' ')}</div>
+          <div class="text-right tabular font-semibold ${cls(t.total)}">${fmt(t.total)}</div>
+        </div>
+      `;
+    }).join('') || '<div class="text-center py-12 text-faint mono">// no rows match filter</div>';
+  }
+
+  renderLB();
+
+  // Filter chip behavior
+  document.querySelectorAll('.chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilter = btn.dataset.filter;
+      renderLB();
+    });
+  });
+
+  document.getElementById('search').addEventListener('input', e => {
+    query = e.target.value;
+    renderLB();
+  });
+</script>
+</body>
+</html>

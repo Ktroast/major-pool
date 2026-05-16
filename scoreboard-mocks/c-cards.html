@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Major Pool · Scoreboard · C — Cards</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  darkMode: 'media',
+  theme: { extend: {
+    fontFamily: {
+      sans: ['Inter','ui-sans-serif','system-ui','sans-serif'],
+    },
+    colors: {
+      // Warm-neutral palette — sports app feel
+      canvas: '#F5F4F0', surface: '#FFFFFF', surface2: '#FBFAF6', hairline: '#E7E5E0',
+      ink1: '#0A0A0A', ink2: '#5B5B58', ink3: '#9A9A95',
+      under: '#B8112C', brass: '#8A6A2B', live: '#E11D48',
+      dcanvas: '#0A0B0E', dsurface: '#15171C', dsurface2: '#1B1E25', dhairline: '#262A33',
+      dink1: '#F5F4EE', dink2: '#A4A39C', dink3: '#6B6B66',
+      dunder: '#FF6B7E', dbrass: '#C9A75A', dlive: '#FB7185',
+    }
+  }}
+};
+</script>
+
+<style>
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* Concept nav */
+  .nav-link { padding: 6px 10px; border-radius: 999px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #5B5B58; }
+  .nav-link.active { background: rgba(10,10,10,0.08); color: #0A0A0A; }
+  @media (prefers-color-scheme: dark) {
+    .nav-link { color: #A4A39C; }
+    .nav-link.active { background: rgba(245,244,238,0.1); color: #F5F4EE; }
+  }
+
+  /* Card */
+  .card {
+    background: #FFFFFF; border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(10,10,10,0.04), 0 6px 24px -12px rgba(10,10,10,0.10);
+    transition: transform 200ms ease, box-shadow 200ms ease;
+    cursor: pointer;
+  }
+  .card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 1px 2px rgba(10,10,10,0.06), 0 12px 32px -12px rgba(10,10,10,0.14);
+  }
+  @media (prefers-color-scheme: dark) {
+    .card { background: #15171C; box-shadow: 0 1px 2px rgba(0,0,0,0.4), 0 8px 28px -12px rgba(0,0,0,0.6); }
+    .card:hover { box-shadow: 0 1px 2px rgba(0,0,0,0.5), 0 16px 40px -12px rgba(0,0,0,0.8); }
+  }
+
+  /* Hero (leader) card variant */
+  .card-hero {
+    background: linear-gradient(135deg, #FBFAF6 0%, #FFFFFF 100%);
+    border-radius: 18px;
+    box-shadow: 0 2px 4px rgba(10,10,10,0.05), 0 16px 48px -16px rgba(138,106,43,0.18);
+    position: relative;
+    overflow: hidden;
+  }
+  .card-hero::before {
+    content: ''; position: absolute; top: 0; left: 0; bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, #8A6A2B 0%, rgba(138,106,43,0.3) 100%);
+  }
+  @media (prefers-color-scheme: dark) {
+    .card-hero { background: linear-gradient(135deg, #1B1E25 0%, #15171C 100%); box-shadow: 0 2px 4px rgba(0,0,0,0.5), 0 16px 48px -16px rgba(201,167,90,0.18); }
+    .card-hero::before { background: linear-gradient(180deg, #C9A75A 0%, rgba(201,167,90,0.3) 100%); }
+  }
+
+  /* Picks scrollable strip */
+  .picks-strip {
+    display: flex; gap: 8px; overflow-x: auto;
+    scrollbar-width: thin; padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .picks-strip::-webkit-scrollbar { height: 4px; }
+  .picks-strip::-webkit-scrollbar-thumb { background: rgba(10,10,10,0.1); border-radius: 999px; }
+  @media (prefers-color-scheme: dark) { .picks-strip::-webkit-scrollbar-thumb { background: rgba(245,244,238,0.1); } }
+
+  .pick-pill {
+    flex: 0 0 auto;
+    display: inline-flex; flex-direction: column; gap: 2px;
+    padding: 8px 12px; border-radius: 10px;
+    background: rgba(10,10,10,0.03); min-width: 92px;
+    border: 1px solid transparent;
+  }
+  .pick-pill.dropped { opacity: 0.45; }
+  .pick-pill.dropped .pick-name { text-decoration: line-through; }
+  .pick-pill.cut { background: rgba(184,17,44,0.05); }
+  .pick-pill.live {
+    background: rgba(225,29,72,0.06);
+    border-color: rgba(225,29,72,0.2);
+  }
+  @media (prefers-color-scheme: dark) {
+    .pick-pill { background: rgba(245,244,238,0.04); }
+    .pick-pill.cut { background: rgba(255,107,126,0.08); }
+    .pick-pill.live { background: rgba(251,113,133,0.08); border-color: rgba(251,113,133,0.25); }
+  }
+
+  /* Badge */
+  .badge { display: inline-flex; align-items: center; padding: 1px 5px; border-radius: 3px; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+  .badge-cut { background: rgba(184,17,44,0.12); color: #B8112C; }
+  .badge-live { background: rgba(225,29,72,0.10); color: #E11D48; }
+  .badge-drop { background: rgba(10,10,10,0.06); color: #9A9A95; }
+  @media (prefers-color-scheme: dark) {
+    .badge-cut { background: rgba(255,107,126,0.15); color: #FF6B7E; }
+    .badge-live { background: rgba(251,113,133,0.15); color: #FB7185; }
+    .badge-drop { background: rgba(245,244,238,0.06); color: #6B6B66; }
+  }
+
+  /* LIVE pulse */
+  @keyframes livePulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+  .pulse { animation: livePulse 2s ease-in-out infinite; }
+
+  /* Card flash on update */
+  @keyframes cardFlash {
+    0%   { box-shadow: 0 0 0 2px rgba(225,29,72,0.40), 0 1px 2px rgba(10,10,10,0.04), 0 6px 24px -12px rgba(10,10,10,0.10); }
+    100% { box-shadow: 0 1px 2px rgba(10,10,10,0.04), 0 6px 24px -12px rgba(10,10,10,0.10); }
+  }
+  @keyframes cardFlashDark {
+    0%   { box-shadow: 0 0 0 2px rgba(251,113,133,0.40), 0 1px 2px rgba(0,0,0,0.4), 0 8px 28px -12px rgba(0,0,0,0.6); }
+    100% { box-shadow: 0 1px 2px rgba(0,0,0,0.4), 0 8px 28px -12px rgba(0,0,0,0.6); }
+  }
+  .flash { animation: cardFlash 1400ms ease-out; }
+  @media (prefers-color-scheme: dark) { .flash { animation: cardFlashDark 1400ms ease-out; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pulse, .flash, .card { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+
+<body class="bg-canvas dark:bg-dcanvas text-ink1 dark:text-dink1 font-sans antialiased min-h-screen">
+
+  <main class="mx-auto max-w-2xl px-4 py-6 sm:py-10">
+
+    <!-- Concept nav -->
+    <nav class="flex items-center gap-1 mb-6">
+      <span class="text-[11px] uppercase tracking-[0.1em] text-ink3 dark:text-dink3 mr-3">Concept</span>
+      <a class="nav-link" href="a-editorial.html">A · Editorial</a>
+      <a class="nav-link" href="b-tactical.html">B · Tactical</a>
+      <a class="nav-link active" href="c-cards.html">C · Cards</a>
+    </nav>
+
+    <!-- Header -->
+    <header class="mb-6">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <div class="text-[10px] uppercase tracking-[0.15em] text-ink3 dark:text-dink3 font-semibold">The Major Pool</div>
+          <h1 class="mt-1.5 text-[26px] sm:text-[30px] font-bold tracking-tight leading-tight">2026 PGA Championship</h1>
+          <p class="mt-1 text-[13px] text-ink2 dark:text-dink2">Round 4 · best 4 of 5 picks</p>
+        </div>
+
+        <button id="updateBtn" type="button"
+                class="inline-flex items-center gap-2 rounded-full bg-surface dark:bg-dsurface border border-hairline dark:border-dhairline px-3 py-1.5 text-[12px] text-ink2 dark:text-dink2 hover:bg-surface2 dark:hover:bg-dsurface2 transition-colors cursor-pointer shadow-sm">
+          <span class="relative flex h-1.5 w-1.5">
+            <span class="absolute inline-flex h-full w-full rounded-full bg-live dark:bg-dlive pulse"></span>
+            <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-live dark:bg-dlive"></span>
+          </span>
+          <span class="font-semibold tracking-wide uppercase text-[10px]">Live</span>
+          <span class="text-ink3 dark:text-dink3 num" id="updatedLabel">Just now</span>
+        </button>
+      </div>
+
+      <!-- Stats row -->
+      <div class="mt-5 grid grid-cols-3 gap-2">
+        <div class="rounded-lg bg-surface dark:bg-dsurface border border-hairline dark:border-dhairline px-3 py-2.5">
+          <div class="text-[9px] uppercase tracking-[0.12em] text-ink3 dark:text-dink3 font-semibold">Cut Penalty</div>
+          <div class="mt-1 text-[16px] font-bold num" id="stat-cut">—</div>
+        </div>
+        <div class="rounded-lg bg-surface dark:bg-dsurface border border-hairline dark:border-dhairline px-3 py-2.5">
+          <div class="text-[9px] uppercase tracking-[0.12em] text-ink3 dark:text-dink3 font-semibold">Entries</div>
+          <div class="mt-1 text-[16px] font-bold num" id="stat-entries">—</div>
+        </div>
+        <div class="rounded-lg bg-surface dark:bg-dsurface border border-hairline dark:border-dhairline px-3 py-2.5">
+          <div class="text-[9px] uppercase tracking-[0.12em] text-ink3 dark:text-dink3 font-semibold">Live Holes</div>
+          <div class="mt-1 text-[16px] font-bold num text-live dark:text-dlive" id="stat-live">—</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Card stack -->
+    <div id="board" class="flex flex-col gap-3"></div>
+
+    <p class="mt-6 text-center text-[11px] text-ink3 dark:text-dink3">Tap the live indicator to simulate an update.</p>
+
+  </main>
+
+<script src="data.js"></script>
+<script>
+const { GOLFERS, PAR, standings, cutPenalty, fmtToPar, pickLabel } = window.MOCK;
+
+function pickPillHtml(p) {
+  const label = pickLabel(p);
+  const cls = ['pick-pill'];
+  if (p.isDropped) cls.push('dropped');
+  if (label === 'MC' || label === 'WD') cls.push('cut');
+  if (p.live) cls.push('live');
+
+  const scoreCls = p.sum < 0 ? 'text-under dark:text-dunder' : 'text-ink1 dark:text-dink1';
+  const last = p.name.split(' ').slice(-1)[0];
+  const tag = label
+    ? `<span class="badge badge-cut">${label}</span>`
+    : p.isDropped
+      ? `<span class="badge badge-drop">Drop</span>`
+      : p.live
+        ? `<span class="badge badge-live">thru ${p.live.thru}</span>`
+        : `<span class="text-[10px] text-ink3 dark:text-dink3 num">#${p.rank}</span>`;
+
+  return `<div class="${cls.join(' ')}">
+    <div class="flex items-center justify-between gap-2">
+      <span class="pick-name text-[12px] font-semibold text-ink1 dark:text-dink1 truncate">${last}</span>
+      ${tag}
+    </div>
+    <div class="text-[15px] font-bold num ${scoreCls}">${fmtToPar(p.sum)}</div>
+  </div>`;
+}
+
+function cardHtml(row, idx) {
+  const isLeader = idx === 0;
+  const isTop3 = idx < 3;
+  const cardCls = isLeader ? 'card-hero p-5 sm:p-6' : 'card p-4 sm:p-5';
+
+  const scoreColor = row.toPar < 0 ? 'text-under dark:text-dunder' : 'text-ink1 dark:text-dink1';
+  const scoreSize = isLeader ? 'text-[44px] sm:text-[52px]' : 'text-[32px] sm:text-[36px]';
+
+  const picks = [...row.picks].sort((a, b) => a.rank - b.rank);
+  const pillsHtml = picks.map(pickPillHtml).join('');
+
+  const liveBanner = row.livePicks > 0
+    ? `<div class="mt-3 inline-flex items-center gap-1.5 text-[11px] text-live dark:text-dlive font-semibold uppercase tracking-wide">
+         <span class="relative flex h-1.5 w-1.5"><span class="absolute inline-flex h-full w-full rounded-full bg-live dark:bg-dlive pulse"></span><span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-live dark:bg-dlive"></span></span>
+         ${row.liveHolesLeft} holes left today · ${row.livePicks} live pick${row.livePicks === 1 ? '' : 's'}
+       </div>`
+    : '';
+
+  const posDisplay = isLeader
+    ? `<div class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-brass dark:bg-dbrass text-white dark:text-dcanvas text-[12px] font-bold num">${row.posDisplay}</div>`
+    : isTop3
+      ? `<span class="text-[14px] font-bold num text-brass dark:text-dbrass">${row.posDisplay}</span>`
+      : `<span class="text-[14px] font-semibold num text-ink2 dark:text-dink2">${row.posDisplay}</span>`;
+
+  return `<article class="${cardCls}" data-id="${row.entry.id}">
+    <div class="flex items-start justify-between gap-4">
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-2">
+          ${posDisplay}
+          ${isLeader ? `<span class="text-[10px] uppercase tracking-[0.15em] text-brass dark:text-dbrass font-bold">Leader</span>` : ''}
+        </div>
+        <h2 class="mt-2 text-[18px] sm:text-[20px] font-bold leading-tight truncate">${row.entry.name}</h2>
+        <p class="mt-0.5 text-[11px] text-ink3 dark:text-dink3 num">Tiebreaker ${fmtToPar(row.entry.tiebreaker)} · thru R${row.roundsScored}/4</p>
+        ${liveBanner}
+      </div>
+      <div class="text-right shrink-0">
+        <div class="${scoreSize} font-bold num ${scoreColor} leading-none tracking-tight">${fmtToPar(row.toPar)}</div>
+        <div class="mt-1 text-[10px] uppercase tracking-[0.12em] text-ink3 dark:text-dink3 font-semibold">to par</div>
+      </div>
+    </div>
+
+    <div class="mt-4 picks-strip">
+      ${pillsHtml}
+    </div>
+  </article>`;
+}
+
+function render() {
+  const rows = standings();
+
+  document.getElementById('stat-cut').textContent = fmtToPar(cutPenalty());
+  document.getElementById('stat-entries').textContent = rows.length;
+  const totalLive = rows.reduce((a, r) => a + r.liveHolesLeft, 0);
+  document.getElementById('stat-live').textContent = totalLive;
+
+  const board = document.getElementById('board');
+  board.innerHTML = rows.map(cardHtml).join('');
+}
+
+let fetchedAt = Date.now();
+function refreshTimestamp() {
+  const mins = Math.floor((Date.now() - fetchedAt) / 60000);
+  const el = document.getElementById('updatedLabel');
+  if (mins < 1) el.textContent = 'Just now';
+  else el.textContent = mins + ' min ago';
+}
+setInterval(refreshTimestamp, 20000);
+
+document.getElementById('updateBtn').addEventListener('click', () => {
+  Object.values(GOLFERS).forEach(g => {
+    if (g.live && g.live.thru < 18) g.live.thru = Math.min(18, g.live.thru + 2);
+  });
+  fetchedAt = Date.now();
+  refreshTimestamp();
+  render();
+  [...document.querySelectorAll('#board > article')].slice(0, 5).forEach(c => {
+    c.classList.add('flash');
+    c.addEventListener('animationend', () => c.classList.remove('flash'), { once: true });
+  });
+});
+
+render();
+</script>
+</body>
+</html>

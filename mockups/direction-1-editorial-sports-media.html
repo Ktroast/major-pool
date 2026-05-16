@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Major Pool · The 2026 Masters · Editorial</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=Barlow:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@1,500;1,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:        #0F1B33;
+    --ink-muted:  #475569;
+    --paper:      #FAF7F2;
+    --paper-alt:  #F2EDE4;
+    --hairline:   #E5DED1;
+    --amber:      #D97706;
+    --amber-soft: #FCD9A5;
+    --red:        #B91C1C;
+    --green:      #15803D;
+  }
+  html, body { background: var(--paper); color: var(--ink); font-family: 'Barlow', sans-serif; }
+  .font-display { font-family: 'Barlow Condensed', sans-serif; letter-spacing: -0.01em; }
+  .font-editorial { font-family: 'Playfair Display', serif; font-style: italic; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .hairline { border-color: var(--hairline); }
+  .ink-muted { color: var(--ink-muted); }
+
+  /* Live indicator — subtle amber breath */
+  .live-dot {
+    width: 7px; height: 7px; border-radius: 999px;
+    background: var(--amber);
+    box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.4);
+    animation: breathe 2.2s ease-in-out infinite;
+  }
+  @keyframes breathe {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.45); }
+    50%      { box-shadow: 0 0 0 6px rgba(217, 119, 6, 0); }
+  }
+  @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+
+  /* Tier chip — monochrome editorial scale */
+  .tier-chip {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 4px;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
+    font-size: 12px; letter-spacing: 0.04em;
+  }
+  .tier-A { background: #0F1B33; color: #FAF7F2; }
+  .tier-B { background: #334155; color: #FAF7F2; }
+  .tier-C { background: #64748B; color: #FAF7F2; }
+  .tier-D { background: #CBD5E1; color: #0F1B33; }
+  .tier-E { background: transparent; color: #0F1B33; border: 1px solid #94A3B8; }
+
+  /* Row hover */
+  .row { transition: background-color 150ms ease, transform 150ms ease; }
+  .row:hover { background: #F4EFE5; cursor: pointer; }
+
+  /* Score colors */
+  .score-neg { color: var(--red); font-weight: 700; }
+  .score-pos { color: var(--ink); }
+  .score-par { color: var(--ink-muted); }
+
+  /* Featured leader cards */
+  .feature-card { background: var(--paper); border: 1px solid var(--hairline); }
+  .feature-1 { background: #0F1B33; color: #FAF7F2; border-color: #0F1B33; }
+  .feature-1 .ink-muted { color: #94A3B8; }
+  .feature-1 .tier-D { background: #FAF7F2; color: #0F1B33; }
+  .feature-1 .tier-E { color: #FAF7F2; border-color: #94A3B8; }
+
+  /* Drop indicator — strikethrough on dropped golfer */
+  .dropped { opacity: 0.5; text-decoration: line-through; text-decoration-thickness: 1px; }
+
+  /* Tabular leaderboard rows separator */
+  .lb-row + .lb-row { border-top: 1px solid var(--hairline); }
+</style>
+</head>
+<body class="min-h-screen">
+
+  <!-- Masthead -->
+  <header class="border-b hairline">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="font-display text-2xl font-bold tracking-tight">THE MAJOR POOL</div>
+        <span class="text-xs uppercase tracking-widest ink-muted hidden sm:inline">Saturday Edition</span>
+      </div>
+      <nav class="flex items-center gap-6 text-sm">
+        <a class="font-medium border-b-2 border-[var(--ink)] pb-0.5">Scores</a>
+        <a class="ink-muted hover:text-[var(--ink)] transition-colors">Entries</a>
+        <a class="ink-muted hover:text-[var(--ink)] transition-colors">Setup</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Tournament hero -->
+  <section class="border-b hairline">
+    <div class="max-w-6xl mx-auto px-6 py-10">
+      <div class="flex items-baseline gap-3 mb-2">
+        <span class="text-xs uppercase tracking-[0.2em] ink-muted">Live coverage</span>
+        <span class="live-dot"></span>
+      </div>
+      <h1 class="font-display font-bold text-5xl md:text-6xl leading-[0.95] tracking-tight">
+        The 89th Masters Tournament
+      </h1>
+      <p class="font-editorial text-lg md:text-xl ink-muted mt-3">
+        Augusta National Golf Club &mdash; Augusta, Georgia
+      </p>
+
+      <!-- Stat strip -->
+      <div class="mt-8 grid grid-cols-2 md:grid-cols-5 gap-x-8 gap-y-4 border-t hairline pt-6">
+        <div>
+          <div class="text-[11px] uppercase tracking-widest ink-muted">Round</div>
+          <div class="font-display text-2xl font-semibold tabular">3 of 4</div>
+        </div>
+        <div>
+          <div class="text-[11px] uppercase tracking-widest ink-muted">Leaders thru</div>
+          <div class="font-display text-2xl font-semibold tabular">13 holes</div>
+        </div>
+        <div>
+          <div class="text-[11px] uppercase tracking-widest ink-muted">Cut line</div>
+          <div class="font-display text-2xl font-semibold tabular">+3 (50)</div>
+        </div>
+        <div>
+          <div class="text-[11px] uppercase tracking-widest ink-muted">Entries</div>
+          <div class="font-display text-2xl font-semibold tabular">74</div>
+        </div>
+        <div>
+          <div class="text-[11px] uppercase tracking-widest ink-muted">Conditions</div>
+          <div class="font-display text-2xl font-semibold">68° · Calm</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Editor's note: scoring rules -->
+  <section class="bg-[var(--paper-alt)] border-b hairline">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+      <span class="text-[11px] uppercase tracking-widest font-semibold">Format</span>
+      <span class="ink-muted">Each entry drafts <strong class="text-[var(--ink)]">one golfer per tier</strong> (A&middot;B&middot;C&middot;D&middot;E). Team total = <strong class="text-[var(--ink)]">best four of five</strong> rounds-to-par. Lowest wins.</span>
+      <div class="ml-auto flex items-center gap-2 text-xs ink-muted">
+        <span class="live-dot"></span> still on the course
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured: Top 3 -->
+  <section class="border-b hairline">
+    <div class="max-w-6xl mx-auto px-6 py-10">
+      <div class="flex items-baseline justify-between mb-6">
+        <h2 class="font-display text-3xl font-bold">The Leaders</h2>
+        <span class="text-xs uppercase tracking-widest ink-muted">Top 3 · After 13</span>
+      </div>
+      <div id="featured" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+    </div>
+  </section>
+
+  <!-- Filter / search bar -->
+  <section class="sticky top-0 z-30 bg-[var(--paper)]/95 backdrop-blur border-b hairline">
+    <div class="max-w-6xl mx-auto px-6 py-3 flex flex-wrap items-center gap-3">
+      <h3 class="font-display text-xl font-bold mr-2">The Field</h3>
+      <span class="ink-muted text-sm">Ranks 4–74</span>
+      <div class="ml-auto flex items-center gap-2">
+        <label class="relative">
+          <input id="search" type="text" placeholder="Search by name or golfer…"
+            class="w-64 max-w-full bg-[var(--paper)] border hairline rounded px-3 py-1.5 text-sm focus:outline-none focus:border-[var(--ink)] transition-colors" />
+        </label>
+      </div>
+    </div>
+    <!-- Column header -->
+    <div class="max-w-6xl mx-auto px-6 py-2 grid grid-cols-12 gap-3 text-[10px] uppercase tracking-widest ink-muted border-t hairline">
+      <div class="col-span-1 text-right">Pos</div>
+      <div class="col-span-4">Entry</div>
+      <div class="col-span-5">Roster · A / B / C / D / E</div>
+      <div class="col-span-1 text-right">Thru</div>
+      <div class="col-span-1 text-right">Total</div>
+    </div>
+  </section>
+
+  <!-- Leaderboard rows -->
+  <section>
+    <div id="leaderboard" class="max-w-6xl mx-auto px-6 pb-20"></div>
+  </section>
+
+  <footer class="border-t hairline">
+    <div class="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between text-xs ink-muted">
+      <span>Scores from ESPN · refreshed every 5 minutes</span>
+      <span>Last refresh 2:47 PM ET</span>
+    </div>
+  </footer>
+
+<script>
+  // ── Seeded data generator (shared across all three mockups) ─────────────
+  const golfersByTier = {
+    A: ['Scottie Scheffler','Rory McIlroy','Jon Rahm','Xander Schauffele','Collin Morikawa','Viktor Hovland','Ludvig Åberg','Bryson DeChambeau'],
+    B: ['Patrick Cantlay','Justin Thomas','Wyndham Clark','Tony Finau','Sahith Theegala','Hideki Matsuyama','Tommy Fleetwood','Brooks Koepka'],
+    C: ['Sungjae Im','Jordan Spieth','Cameron Smith','Russell Henley','Sepp Straka','Tom Kim','Sam Burns','Joaquin Niemann'],
+    D: ['Min Woo Lee','Akshay Bhatia','Robert MacIntyre','Maverick McNealy','Si Woo Kim','Adam Scott','Corey Conners','Eric Cole'],
+    E: ['Justin Rose','Chris Kirk','Stephan Jaeger','Davis Thompson','Taylor Pendrith','Erik van Rooyen','Mackenzie Hughes','J.T. Poston']
+  };
+  const firstNames = ['Keenan','Mike','Sarah','Tom','Alex','Jamie','Pat','Chris','Ryan','Drew','Kate','Ben','Jess','Sam','Will','Andy','Megan','Luke','Owen','Beth','Nate','Liz','Joe','Maddy','Connor','Ethan','Hannah','Ian','Jordan','Kyle','Logan','Mia','Noah','Olivia','Quinn','Riley','Tyler','Vince','Wes','Zoe','Abby','Brian','Cara','Dan','Erin','Finn','Gus','Holly','Ivy','Jake','Kim','Leo','Mark','Nick','Paige','Reese','Scott','Theo','Uma','Vera','Wendy','Cody','Brooke','Hugo','Iris','Casey','Lane','Reid','Pearl','Asa','Mel','Rob','Tess','Vic'];
+
+  function mulberry32(seed){let a=seed;return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+  const rand = mulberry32(42);
+  const pick = arr => arr[Math.floor(rand()*arr.length)];
+
+  function generateTeams() {
+    const teams = [];
+    const usedPairs = new Set();
+    for (let i = 0; i < 74; i++) {
+      let p1, p2, key;
+      do { p1 = pick(firstNames); p2 = pick(firstNames); key = [p1,p2].sort().join('|'); }
+      while (p1 === p2 || usedPairs.has(key));
+      usedPairs.add(key);
+
+      const golfers = ['A','B','C','D','E'].map(tier => ({ tier, name: pick(golfersByTier[tier]) }));
+      const frac = i / 73;
+      const targetTotal = -18 + frac * 26 + (rand() - 0.5) * 3;
+
+      golfers.forEach(g => {
+        g.score = Math.round(targetTotal / 4 + (rand() - 0.5) * 6);
+        g.cut = rand() < 0.06;
+        if (g.cut) g.score = Math.max(g.score, 4) + 6;
+      });
+
+      // Drop worst golfer (best 4 of 5)
+      let dropIdx = 0;
+      golfers.forEach((g, k) => { if (g.score > golfers[dropIdx].score) dropIdx = k; });
+      const counted = golfers.filter((_, k) => k !== dropIdx);
+      const total = counted.reduce((s, g) => s + g.score, 0);
+
+      const isLive = rand() < 0.18;
+      teams.push({ players: [p1, p2], golfers, dropIdx, total, isLive, thru: isLive ? 10 + Math.floor(rand()*8) : 18 });
+    }
+    teams.sort((a, b) => a.total - b.total);
+    teams.forEach((t, i) => t.rank = i + 1);
+    return teams;
+  }
+
+  const teams = generateTeams();
+  const fmt = n => n > 0 ? '+' + n : (n === 0 ? 'E' : String(n));
+  const scoreClass = n => n < 0 ? 'score-neg' : (n > 0 ? 'score-pos' : 'score-par');
+
+  // ── Render: featured top 3 ────────────────────────────────────────────
+  const featuredEl = document.getElementById('featured');
+  featuredEl.innerHTML = teams.slice(0, 3).map((t, i) => {
+    const isWinner = i === 0;
+    const pairLabel = t.players.join(' & ');
+    return `
+      <article class="feature-card ${isWinner ? 'feature-1' : ''} rounded p-5 cursor-pointer transition-shadow hover:shadow-md">
+        <div class="flex items-baseline justify-between">
+          <div class="flex items-baseline gap-2">
+            <span class="font-display text-5xl font-bold tabular leading-none">${t.rank}</span>
+            ${t.isLive ? '<span class="live-dot ml-1"></span>' : ''}
+          </div>
+          <div class="text-right">
+            <div class="font-display text-4xl font-bold tabular ${scoreClass(t.total)} leading-none">${fmt(t.total)}</div>
+            <div class="text-[10px] uppercase tracking-widest ink-muted mt-1">Thru ${t.thru === 18 ? 'F' : t.thru}</div>
+          </div>
+        </div>
+        <h3 class="font-display text-2xl font-semibold mt-4 leading-tight">${pairLabel}</h3>
+        <div class="text-xs ink-muted mb-3 font-editorial">${i === 0 ? 'Leading the field' : i === 1 ? 'One back' : 'On the chase'}</div>
+        <div class="space-y-1 border-t hairline pt-3 ${isWinner ? 'border-slate-700' : ''}">
+          ${t.golfers.map((g, k) => `
+            <div class="flex items-center gap-3 text-sm ${k === t.dropIdx ? 'dropped' : ''}">
+              <span class="tier-chip tier-${g.tier}">${g.tier}</span>
+              <span class="flex-1 truncate">${g.name}</span>
+              <span class="tabular ${scoreClass(g.score)} font-semibold">${fmt(g.score)}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div class="text-[10px] uppercase tracking-widest ink-muted mt-3 ${isWinner ? 'text-slate-400' : ''}">Best 4 counted &middot; lowest dropped</div>
+      </article>
+    `;
+  }).join('');
+
+  // ── Render: leaderboard rows 4–74 ─────────────────────────────────────
+  const leaderboardEl = document.getElementById('leaderboard');
+  function renderRows(filter = '') {
+    const f = filter.toLowerCase().trim();
+    const rows = teams.slice(3).filter(t => {
+      if (!f) return true;
+      return t.players.some(p => p.toLowerCase().includes(f))
+        || t.golfers.some(g => g.name.toLowerCase().includes(f));
+    });
+    leaderboardEl.innerHTML = rows.map(t => `
+      <div class="lb-row row grid grid-cols-12 gap-3 py-3 px-2 -mx-2 rounded items-center">
+        <div class="col-span-1 text-right font-display text-xl font-semibold tabular flex items-center justify-end gap-1.5">
+          ${t.isLive ? '<span class="live-dot"></span>' : ''}
+          <span>${t.rank}</span>
+        </div>
+        <div class="col-span-4 min-w-0">
+          <div class="font-display text-lg font-semibold leading-tight truncate">${t.players.join(' &amp; ')}</div>
+          <div class="text-[11px] ink-muted truncate font-editorial">${t.golfers.filter((_,k)=>k!==t.dropIdx).map(g=>g.name.split(' ').pop()).join(' · ')}</div>
+        </div>
+        <div class="col-span-5 flex items-center gap-2 flex-wrap">
+          ${t.golfers.map((g, k) => `
+            <div class="flex items-center gap-1.5 ${k === t.dropIdx ? 'opacity-50' : ''}">
+              <span class="tier-chip tier-${g.tier}">${g.tier}</span>
+              <span class="tabular text-sm font-semibold ${scoreClass(g.score)} ${k === t.dropIdx ? 'line-through' : ''}">${fmt(g.score)}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div class="col-span-1 text-right text-sm ink-muted tabular">${t.thru === 18 ? 'F' : t.thru}</div>
+        <div class="col-span-1 text-right font-display text-2xl font-bold tabular ${scoreClass(t.total)}">${fmt(t.total)}</div>
+      </div>
+    `).join('') || '<div class="text-center py-12 ink-muted">No entries match.</div>';
+  }
+  renderRows();
+  document.getElementById('search').addEventListener('input', e => renderRows(e.target.value));
+</script>
+</body>
+</html>

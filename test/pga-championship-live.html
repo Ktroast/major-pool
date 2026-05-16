@@ -124,10 +124,154 @@
     transition: background-color 120ms ease, border-left-color 120ms ease;
     cursor: pointer;
     border-left: 2px solid transparent;
+    outline-offset: -2px;
   }
-  .lb-row + .lb-row { border-top: 1px solid var(--hairline); }
+  .lb-row-wrap + .lb-row-wrap > .lb-row { border-top: 1px solid var(--hairline); }
   .lb-row:hover { background: #F4EFE5; border-left-color: var(--ink); }
+  .lb-row:focus-visible { outline: 2px solid var(--ink); background: #F4EFE5; }
   .lb-row.is-live { border-left-color: var(--amber); }
+  .lb-row-wrap[data-open="true"] > .lb-row { background: #F4EFE5; border-left-color: var(--ink); }
+  .lb-row-wrap[data-open="true"] > .lb-row.is-live { border-left-color: var(--amber); }
+
+  /* ── Mobile card open state ─────────────────────────── */
+  .row-card { outline-offset: -2px; cursor: pointer; }
+  .row-card:focus-visible { outline: 2px solid var(--ink); }
+  .row-card[aria-expanded="true"] { border-color: var(--ink); }
+  .row-card.is-live[aria-expanded="true"] { border-color: var(--amber); }
+
+  /* ── Expand panel (round-by-round detail) ───────────── */
+  .lb-expand {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 220ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .lb-expand[data-open="true"] { grid-template-rows: 1fr; }
+  .lb-expand-clip { overflow: hidden; min-height: 0; }
+  @media (prefers-reduced-motion: reduce) {
+    .lb-expand { transition: none; }
+  }
+
+  /* desktop inner */
+  .field-desktop .lb-expand-inner {
+    background: var(--paper-alt);
+    border-top: 1px dashed var(--hairline);
+    padding: 14px 16px 16px 18px;
+  }
+  /* mobile inner — continues the card visually */
+  .field-mobile .lb-expand-inner {
+    background: var(--paper-alt);
+    border: 1px solid var(--hairline);
+    border-top: 1px dashed var(--hairline);
+    border-radius: 0 0 2px 2px;
+    margin-top: -1px;
+    padding: 12px 14px 14px;
+  }
+
+  .lb-expand-head, .lb-expand-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) repeat(4, 48px) 56px;
+    align-items: center;
+    gap: 4px 10px;
+    padding: 6px 0;
+  }
+  .lb-expand-head {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-muted);
+    border-bottom: 1px solid var(--hairline);
+    padding-bottom: 5px;
+    padding-top: 0;
+  }
+  .lb-expand-head .lb-c-r, .lb-expand-head .lb-c-sum { text-align: right; }
+  .lb-expand-row { font-size: 13px; }
+  .lb-expand-row + .lb-expand-row { border-top: 1px dashed var(--hairline); }
+  .lb-expand-row .lb-c-name {
+    display: flex; align-items: center; gap: 8px; min-width: 0;
+  }
+  .pick-name-block {
+    display: flex; flex-direction: column; min-width: 0; line-height: 1.15;
+  }
+  .lb-expand-row .pick-fullname {
+    font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .pick-status {
+    display: block;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    font-weight: 600;
+    margin-top: 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .round-live {
+    display: inline-flex; align-items: center; gap: 5px;
+    color: var(--amber); font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    font-size: 11px;
+    justify-content: flex-end;
+  }
+  .pick-status.is-live { color: var(--amber); }
+  .pick-status.is-warn { color: var(--red); }
+  .feature-1 .pick-status { color: #94A3B8; }
+  .feature-1 .pick-status.is-live { color: #FCD34D; }
+  .feature-1 .pick-status.is-warn { color: #FCA5A5; }
+  .lb-expand-row.dropped .pick-status { text-decoration: none; }
+  .feature-card .dropped .pick-status { text-decoration: none; }
+  .lb-expand-row .lb-c-r { text-align: right; font-variant-numeric: tabular-nums; }
+  .lb-expand-row .lb-c-sum {
+    text-align: right; font-weight: 700; font-variant-numeric: tabular-nums;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 16px;
+  }
+  .lb-expand-row.dropped { opacity: 0.55; }
+  .lb-expand-row.dropped .pick-fullname,
+  .lb-expand-row.dropped .lb-c-sum { text-decoration: line-through; text-decoration-thickness: 1px; }
+
+  .lb-live-cell {
+    display: inline-flex; flex-direction: column; align-items: flex-end; line-height: 1.1;
+    gap: 1px;
+  }
+  .lb-live-thru {
+    font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--amber); font-weight: 700; white-space: nowrap;
+  }
+  .lb-live-thru-today {
+    font-size: 9px; color: var(--amber); font-weight: 500;
+  }
+
+  .lb-expand-rollup {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--hairline);
+    display: flex; align-items: baseline; justify-content: space-between; gap: 14px;
+    flex-wrap: wrap;
+  }
+  .lb-expand-rollup .rollup-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--ink-muted); font-weight: 600;
+  }
+  .lb-expand-rollup .rollup-math {
+    font-family: 'Barlow', sans-serif;
+    font-size: 12px; color: var(--ink-muted);
+    font-variant-numeric: tabular-nums;
+    margin-top: 3px;
+  }
+  .lb-expand-rollup .rollup-total {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 28px; font-weight: 700; line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (max-width: 480px) {
+    .lb-expand-head, .lb-expand-row {
+      grid-template-columns: minmax(0, 1fr) repeat(4, 36px) 46px;
+      gap: 3px 6px;
+      font-size: 12px;
+    }
+    .lb-expand-row .lb-c-sum { font-size: 15px; }
+    .lb-live-thru { font-size: 8px; }
+  }
 
   /* ── Picks list (mobile wrap) ───────────────────────── */
   .picks-list {
@@ -269,7 +413,7 @@
   <section class="bg-[var(--paper-alt)] border-b hairline">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
       <span class="text-[10px] uppercase tracking-widest font-semibold">Format</span>
-      <span class="ink-muted">Each entry drafts <strong class="text-[var(--ink)]">one golfer per tier</strong> (A&middot;B&middot;C&middot;D&middot;E). Team total = <strong class="text-[var(--ink)]">best four of five</strong> rounds-to-par. Lowest wins.</span>
+      <span class="ink-muted">Each entry drafts <strong class="text-[var(--ink)]">one golfer per tier</strong> (1&middot;2&middot;3&middot;4&middot;5). Team total = <strong class="text-[var(--ink)]">best four of five</strong> rounds-to-par. Lowest wins.</span>
       <div class="ml-auto flex items-center gap-2 text-xs ink-muted">
         <span class="live-dot"></span> still on the course
       </div>
@@ -314,9 +458,9 @@
     <div class="field-desktop max-w-6xl mx-auto px-6 py-2 grid grid-cols-12 gap-3 text-[10px] uppercase tracking-widest ink-muted border-t hairline">
       <div class="col-span-1 text-right">Pos</div>
       <div class="col-span-3">Entry</div>
-      <div class="col-span-5">Roster · A / B / C / D / E</div>
+      <div class="col-span-5">Roster · 1 / 2 / 3 / 4 / 5</div>
       <div class="col-span-1 text-right">Drop</div>
-      <div class="col-span-1 text-right">Thru</div>
+      <div class="col-span-1 text-right">Round</div>
       <div class="col-span-1 text-right">Total</div>
     </div>
   </section>
@@ -539,6 +683,8 @@ function fmtToPar(n) {
   if (n === 0) return 'E';
   return n < 0 ? '−' + Math.abs(n) : '+' + n;
 }
+const TIER_LABEL = { A: '1', B: '2', C: '3', D: '4', E: '5' };
+function tierLabel(t) { return TIER_LABEL[t] || t; }
 function scoreClass(n) {
   if (n === null || n === undefined) return 'score-par';
   return n < 0 ? 'score-neg' : (n > 0 ? 'score-pos' : 'score-par');
@@ -565,13 +711,29 @@ function pickRoundsPlayed(p) {
   // Count only rounds that have a usable to-par value
   return Object.values(p.rounds || {}).filter(r => roundRelative(r) !== null).length;
 }
+function pickRoundsDetailed(player) {
+  const arr = [];
+  for (let i = 1; i <= 4; i++) {
+    const r = player?.rounds?.[i];
+    arr.push({
+      relative: roundRelative(r),
+      inProgress: roundInProgress(r),
+      holesPlayed: roundHolesPlayed(r),
+    });
+  }
+  return arr;
+}
 
 function entryStats(entry, scoreIdx, cutPenaltyVal) {
   const resolved = entry.picks.map((name, tierIdx) => {
     const player = scoreIdx.get(normName(name));
     const tier = 'ABCDE'[tierIdx];
     if (!player) {
-      return { tier, name, sum: null, status: 'unknown', live: null, played: 0, missing: true };
+      return {
+        tier, name, sum: null, status: 'unknown', live: null,
+        played: 0, missing: true,
+        rounds: pickRoundsDetailed(null),
+      };
     }
     const sum = pickSum(player);
     return {
@@ -583,6 +745,7 @@ function entryStats(entry, scoreIdx, cutPenaltyVal) {
       live: player.live,
       played: pickRoundsPlayed(player),
       missing: false,
+      rounds: pickRoundsDetailed(player),
     };
   });
   const ranked = resolved.map(p => ({...p, _sortSum: p.sum === null ? 99 : p.sum}))
@@ -594,13 +757,17 @@ function entryStats(entry, scoreIdx, cutPenaltyVal) {
   const picksMarked = resolved.map(p => ({...p, isDropped: p.tier === droppedTier}));
   const livePicks = resolved.filter(p => p.live).length;
   const playedVals = counted.map(p => p.played).filter(n => Number.isFinite(n));
+  const allPlayedVals = resolved.map(p => p.played).filter(n => Number.isFinite(n));
+  const liveRound = resolved.find(p => p.live)?.live?.round || null;
   return {
     entry,
     picks: picksMarked,
     droppedTier,
     total,
     livePicks,
+    liveRound,
     minPlayed: playedVals.length ? Math.min(...playedVals) : 0,
+    minAllPlayed: allPlayedVals.length ? Math.min(...allPlayedVals) : 0,
   };
 }
 
@@ -659,20 +826,124 @@ function featuredCardHtml(row, idx) {
       </div>
       <h3 class="font-display text-2xl font-semibold mt-4 leading-tight">${row.entry.name}</h3>
       <div class="text-xs ink-muted mb-3 font-editorial">${deck} &middot; tiebreaker ${fmtToPar(row.entry.tiebreaker)}</div>
-      <div class="space-y-1 border-t hairline pt-3">
+      <div class="space-y-2 border-t hairline pt-3">
         ${row.picks.map(p => `
           <div class="flex items-center gap-3 text-sm ${p.isDropped ? 'dropped' : ''}">
-            <span class="tier-chip tier-${p.tier}">${p.tier}</span>
-            <span class="flex-1 truncate">${p.name}${pickFlagHtml(p)}</span>
+            <span class="tier-chip tier-${p.tier}">${tierLabel(p.tier)}</span>
+            <span class="pick-name-block flex-1">
+              <span class="truncate">${p.name}</span>
+              ${pickStatusHtml(p)}
+            </span>
             <span class="score-text tabular ${scoreClass(p.sum)} font-semibold">${fmtToPar(p.sum)}</span>
           </div>
         `).join('')}
       </div>
       <div class="text-[10px] uppercase tracking-widest ink-muted mt-3">
-        Best 4 counted &middot; tier ${row.droppedTier} dropped
+        Best 4 counted &middot; tier ${tierLabel(row.droppedTier)} dropped
       </div>
     </article>
   `;
+}
+
+//============================================================================
+// Render — expand panel (per-row detail)
+//============================================================================
+function entryRoundHtml(row) {
+  if (row.liveRound) {
+    return `<span class="round-live"><span class="live-dot"></span>R${row.liveRound} live</span>`;
+  }
+  if (!row.minAllPlayed) return '—';
+  return `Thru R${row.minAllPlayed}`;
+}
+
+function pickStatusHtml(p) {
+  if (p.missing) return '<span class="pick-status is-warn">Player not found</span>';
+  if (p.status === 'mc') return '<span class="pick-status is-warn">Missed cut</span>';
+  if (p.status === 'wd') return '<span class="pick-status is-warn">Withdrew</span>';
+  if (p.live) {
+    return `<span class="pick-status is-live">R${p.live.round} in progress &middot; thru ${p.live.thru || 0}</span>`;
+  }
+  if (p.played === 0) return '<span class="pick-status">Has not started</span>';
+  return `<span class="pick-status">Thru R${p.played}</span>`;
+}
+
+function roundCellHtml(detail) {
+  const hasRel = detail.relative !== null && detail.relative !== undefined;
+  if (!hasRel && !detail.inProgress) {
+    return '<span class="lb-c-r ink-faint">&mdash;</span>';
+  }
+  const cls = scoreClass(detail.relative);
+  const relText = hasRel ? fmtToPar(detail.relative) : '—';
+  if (detail.inProgress) {
+    return `<span class="lb-c-r"><span class="lb-live-cell">
+      <span class="${cls} tabular font-semibold">${relText}</span>
+      <span class="lb-live-thru">thru ${detail.holesPlayed || 0}</span>
+    </span></span>`;
+  }
+  return `<span class="lb-c-r ${cls}">${relText}</span>`;
+}
+
+function expandPanelHtml(row, panelId) {
+  const picks = row.picks;
+  const counted = picks.filter(p => !p.isDropped);
+  const dropped = picks.find(p => p.isDropped);
+  const mathParts = counted.map(p => {
+    const v = p.sum;
+    if (v === null || v === undefined) return '—';
+    return v < 0 ? `(${fmtToPar(v)})` : fmtToPar(v);
+  });
+  const totalCls = scoreClass(row.total);
+  const rowsHtml = picks.map(p => {
+    const cells = p.rounds.map(roundCellHtml).join('');
+    const sumText = p.missing ? '—' : fmtToPar(p.sum);
+    const sumCls = scoreClass(p.sum);
+    return `
+      <div class="lb-expand-row ${p.isDropped ? 'dropped' : ''}">
+        <span class="lb-c-name">
+          <span class="tier-chip tier-${p.tier}">${tierLabel(p.tier)}</span>
+          <span class="pick-name-block">
+            <span class="pick-fullname">${p.name || '—'}</span>
+            ${pickStatusHtml(p)}
+          </span>
+        </span>
+        ${cells}
+        <span class="lb-c-sum ${sumCls}">${sumText}</span>
+      </div>
+    `;
+  }).join('');
+  const droppedNote = dropped
+    ? (dropped.sum === null || dropped.sum === undefined
+        ? `Tier ${tierLabel(dropped.tier)} dropped`
+        : `Tier ${tierLabel(dropped.tier)} dropped (${fmtToPar(dropped.sum)})`)
+    : '';
+  return `
+    <div class="lb-expand" id="${panelId}" data-open="false" aria-hidden="true" inert>
+      <div class="lb-expand-clip">
+        <div class="lb-expand-inner">
+          <div class="lb-expand-head">
+            <span>Pick</span>
+            <span class="lb-c-r">R1</span>
+            <span class="lb-c-r">R2</span>
+            <span class="lb-c-r">R3</span>
+            <span class="lb-c-r">R4</span>
+            <span class="lb-c-sum">Sum</span>
+          </div>
+          ${rowsHtml}
+          <div class="lb-expand-rollup">
+            <div class="min-w-0">
+              <div class="rollup-label">Best 4 of 5 &middot; ${droppedNote}</div>
+              <div class="rollup-math">${mathParts.join(' + ')} = ${fmtToPar(row.total)}</div>
+            </div>
+            <div class="rollup-total ${totalCls}">${fmtToPar(row.total)}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function rowIdAttr(row) {
+  return String(row.entry.id);
 }
 
 //============================================================================
@@ -681,31 +952,40 @@ function featuredCardHtml(row, idx) {
 function mobileRowHtml(row) {
   const totalCls = scoreClass(row.total);
   const isLive = row.livePicks > 0;
+  const rid = rowIdAttr(row);
+  const triggerId = `rowm-${rid}-trigger`;
+  const panelId = `rowm-${rid}-panel`;
   return `
-    <div class="row-card ${isLive ? 'is-live' : ''}">
-      <div class="flex items-baseline justify-between gap-3">
-        <div class="flex items-baseline gap-2 min-w-0">
-          <span class="big-num text-2xl tabular ink-muted">${row.posDisplay}</span>
-          ${isLive ? '<span class="live-dot"></span>' : ''}
-          <span class="font-display text-lg font-semibold leading-none truncate">${row.entry.name}</span>
+    <div class="lb-row-wrap ${isLive ? 'is-live-wrap' : ''}" data-row-id="${rid}" data-open="false">
+      <div class="row-card ${isLive ? 'is-live' : ''}"
+           id="${triggerId}"
+           role="button" tabindex="0"
+           aria-expanded="false" aria-controls="${panelId}">
+        <div class="flex items-baseline justify-between gap-3">
+          <div class="flex items-baseline gap-2 min-w-0">
+            <span class="big-num text-2xl tabular ink-muted">${row.posDisplay}</span>
+            ${isLive ? '<span class="live-dot"></span>' : ''}
+            <span class="font-display text-lg font-semibold leading-none truncate">${row.entry.name}</span>
+          </div>
+          <span class="big-num text-2xl tabular ${totalCls} shrink-0">${fmtToPar(row.total)}</span>
         </div>
-        <span class="big-num text-2xl tabular ${totalCls} shrink-0">${fmtToPar(row.total)}</span>
+        <div class="picks-list">
+          ${row.picks.map(p => `
+            <span class="pick-line ${p.isDropped ? 'dropped' : ''}">
+              <span class="tier-chip tier-${p.tier}">${tierLabel(p.tier)}</span>
+              <span class="pick-name">${(p.name || '').split(' ').slice(-1)[0]}</span>
+              <span class="score-text tabular font-semibold ${scoreClass(p.sum)}">${fmtToPar(p.sum)}</span>
+              ${pickFlagHtml(p)}
+            </span>
+          `).join('')}
+        </div>
+        <div class="mt-2 text-[10px] uppercase tracking-widest ink-faint flex items-center gap-3">
+          <span>Tier ${tierLabel(row.droppedTier)} dropped</span>
+          <span>·</span>
+          <span>Tiebrk ${fmtToPar(row.entry.tiebreaker)}</span>
+        </div>
       </div>
-      <div class="picks-list">
-        ${row.picks.map(p => `
-          <span class="pick-line ${p.isDropped ? 'dropped' : ''}">
-            <span class="tier-chip tier-${p.tier}">${p.tier}</span>
-            <span class="pick-name">${(p.name || '').split(' ').slice(-1)[0]}</span>
-            <span class="score-text tabular font-semibold ${scoreClass(p.sum)}">${fmtToPar(p.sum)}</span>
-            ${pickFlagHtml(p)}
-          </span>
-        `).join('')}
-      </div>
-      <div class="mt-2 text-[10px] uppercase tracking-widest ink-faint flex items-center gap-3">
-        <span>Tier ${row.droppedTier} dropped</span>
-        <span>·</span>
-        <span>Tiebrk ${fmtToPar(row.entry.tiebreaker)}</span>
-      </div>
+      ${expandPanelHtml(row, panelId)}
     </div>
   `;
 }
@@ -717,30 +997,39 @@ function desktopRowHtml(row) {
   const totalCls = scoreClass(row.total);
   const isLive = row.livePicks > 0;
   const byTier = ['A','B','C','D','E'].map(t => row.picks.find(p => p.tier === t));
+  const rid = rowIdAttr(row);
+  const triggerId = `rowd-${rid}-trigger`;
+  const panelId = `rowd-${rid}-panel`;
   return `
-    <div class="lb-row ${isLive ? 'is-live' : ''} grid grid-cols-12 gap-3 py-3 px-2 -mx-2 items-center">
-      <div class="col-span-1 text-right font-display text-xl font-semibold tabular flex items-center justify-end gap-1.5">
-        ${isLive ? '<span class="live-dot"></span>' : ''}
-        <span>${row.posDisplay}</span>
+    <div class="lb-row-wrap" data-row-id="${rid}" data-open="false">
+      <div class="lb-row ${isLive ? 'is-live' : ''} grid grid-cols-12 gap-3 py-3 px-2 -mx-2 items-center"
+           id="${triggerId}"
+           role="button" tabindex="0"
+           aria-expanded="false" aria-controls="${panelId}">
+        <div class="col-span-1 text-right font-display text-xl font-semibold tabular flex items-center justify-end gap-1.5">
+          ${isLive ? '<span class="live-dot"></span>' : ''}
+          <span>${row.posDisplay}</span>
+        </div>
+        <div class="col-span-3 min-w-0">
+          <div class="font-display text-lg font-semibold leading-tight truncate">${row.entry.name}</div>
+          <div class="text-[11px] ink-muted truncate font-editorial">Tiebrk ${fmtToPar(row.entry.tiebreaker)} &middot; ${row.picks.filter(p => !p.isDropped).map(p => (p.name || '').split(' ').slice(-1)[0]).join(' · ')}</div>
+        </div>
+        <div class="col-span-5 flex items-center gap-3 flex-wrap">
+          ${byTier.map(p => `
+            <div class="flex items-center gap-1.5 ${p.isDropped ? 'dropped' : ''}">
+              <span class="tier-chip tier-${p.tier}">${tierLabel(p.tier)}</span>
+              <span class="tabular text-sm font-semibold score-text ${scoreClass(p.sum)}">${fmtToPar(p.sum)}</span>
+              ${p.status === 'mc' ? '<span class="pick-flag">MC</span>' : ''}
+              ${p.status === 'wd' ? '<span class="pick-flag">WD</span>' : ''}
+              ${p.live ? '<span class="live-dot"></span>' : ''}
+            </div>
+          `).join('')}
+        </div>
+        <div class="col-span-1 text-right text-sm ink-muted tabular">${tierLabel(row.droppedTier)}</div>
+        <div class="col-span-1 text-right text-sm ink-muted tabular">${entryRoundHtml(row)}</div>
+        <div class="col-span-1 text-right font-display text-2xl font-bold tabular ${totalCls}">${fmtToPar(row.total)}</div>
       </div>
-      <div class="col-span-3 min-w-0">
-        <div class="font-display text-lg font-semibold leading-tight truncate">${row.entry.name}</div>
-        <div class="text-[11px] ink-muted truncate font-editorial">Tiebrk ${fmtToPar(row.entry.tiebreaker)} &middot; ${row.picks.filter(p => !p.isDropped).map(p => (p.name || '').split(' ').slice(-1)[0]).join(' · ')}</div>
-      </div>
-      <div class="col-span-5 flex items-center gap-3 flex-wrap">
-        ${byTier.map(p => `
-          <div class="flex items-center gap-1.5 ${p.isDropped ? 'dropped' : ''}">
-            <span class="tier-chip tier-${p.tier}">${p.tier}</span>
-            <span class="tabular text-sm font-semibold score-text ${scoreClass(p.sum)}">${fmtToPar(p.sum)}</span>
-            ${p.status === 'mc' ? '<span class="pick-flag">MC</span>' : ''}
-            ${p.status === 'wd' ? '<span class="pick-flag">WD</span>' : ''}
-            ${p.live ? '<span class="live-dot"></span>' : ''}
-          </div>
-        `).join('')}
-      </div>
-      <div class="col-span-1 text-right text-sm ink-muted tabular">${row.droppedTier}</div>
-      <div class="col-span-1 text-right text-sm ink-muted tabular">R${row.minPlayed}</div>
-      <div class="col-span-1 text-right font-display text-2xl font-bold tabular ${totalCls}">${fmtToPar(row.total)}</div>
+      ${expandPanelHtml(row, panelId)}
     </div>
   `;
 }
@@ -759,6 +1048,107 @@ function renderHeader(rows, tournament, cutPenaltyVal) {
 }
 
 let allRows = [];
+let expandedId = null;
+
+function applyExpandState() {
+  const containers = [document.getElementById('lbMobile'), document.getElementById('lbDesktop')];
+  // If the previously expanded row was filtered out of both lists, clear state.
+  if (expandedId) {
+    const stillVisible = containers.some(c => c && c.querySelector(`.lb-row-wrap[data-row-id="${CSS.escape(expandedId)}"]`));
+    if (!stillVisible) expandedId = null;
+  }
+  containers.forEach(c => {
+    if (!c) return;
+    c.querySelectorAll('.lb-row-wrap').forEach(wrap => {
+      const id = wrap.dataset.rowId;
+      const open = expandedId !== null && id === expandedId;
+      wrap.dataset.open = String(open);
+      const trigger = wrap.querySelector('[role="button"]');
+      const panel = wrap.querySelector('.lb-expand');
+      if (trigger) trigger.setAttribute('aria-expanded', String(open));
+      if (panel) {
+        panel.dataset.open = String(open);
+        if (open) {
+          panel.removeAttribute('inert');
+          panel.removeAttribute('aria-hidden');
+        } else {
+          panel.setAttribute('inert', '');
+          panel.setAttribute('aria-hidden', 'true');
+        }
+      }
+    });
+  });
+}
+
+function toggleExpand(id) {
+  expandedId = (expandedId === id) ? null : id;
+  applyExpandState();
+}
+
+function focusSiblingTrigger(container, currentTrigger, direction) {
+  const triggers = Array.from(container.querySelectorAll('[role="button"]'));
+  const idx = triggers.indexOf(currentTrigger);
+  if (idx < 0) return;
+  const nextIdx = direction === 'down' ? idx + 1
+                : direction === 'up'   ? idx - 1
+                : direction === 'home' ? 0
+                : direction === 'end'  ? triggers.length - 1
+                : idx;
+  if (nextIdx >= 0 && nextIdx < triggers.length) triggers[nextIdx].focus();
+}
+
+function attachRowHandlers(container) {
+  if (!container || container.dataset.handlersAttached === 'true') return;
+  container.dataset.handlersAttached = 'true';
+
+  container.addEventListener('click', e => {
+    // Ignore clicks that originated inside an already-open panel
+    if (e.target.closest('.lb-expand')) return;
+    const wrap = e.target.closest('.lb-row-wrap');
+    if (!wrap) return;
+    toggleExpand(wrap.dataset.rowId);
+  });
+
+  container.addEventListener('keydown', e => {
+    const trigger = e.target.closest('[role="button"]');
+    if (!trigger || !container.contains(trigger)) return;
+    const wrap = trigger.closest('.lb-row-wrap');
+    if (!wrap) return;
+
+    switch (e.key) {
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        toggleExpand(wrap.dataset.rowId);
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        focusSiblingTrigger(container, trigger, 'down');
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        focusSiblingTrigger(container, trigger, 'up');
+        break;
+      case 'Home':
+        e.preventDefault();
+        focusSiblingTrigger(container, trigger, 'home');
+        break;
+      case 'End':
+        e.preventDefault();
+        focusSiblingTrigger(container, trigger, 'end');
+        break;
+      case 'Escape':
+        if (expandedId === wrap.dataset.rowId) {
+          e.preventDefault();
+          expandedId = null;
+          applyExpandState();
+          trigger.focus();
+        }
+        break;
+    }
+  });
+}
+
 function renderField(filter = '') {
   const f = filter.toLowerCase().trim();
   const filtered = allRows.slice(3).filter(r => {
@@ -768,6 +1158,7 @@ function renderField(filter = '') {
   });
   document.getElementById('lbMobile').innerHTML  = filtered.map(mobileRowHtml).join('')  || '<div class="text-center py-12 ink-muted text-sm">No entries match.</div>';
   document.getElementById('lbDesktop').innerHTML = filtered.map(desktopRowHtml).join('') || '<div class="text-center py-12 ink-muted text-sm">No entries match.</div>';
+  applyExpandState();
 }
 
 function renderFeatured() {
@@ -810,6 +1201,8 @@ async function boot() {
   renderHeader(allRows, tournament, cutPenaltyVal);
   renderFeatured();
   renderField();
+  attachRowHandlers(document.getElementById('lbMobile'));
+  attachRowHandlers(document.getElementById('lbDesktop'));
 
   setInterval(() => {
     document.getElementById('updatedLabel').textContent = formatUpdatedAt(fetchedAt);

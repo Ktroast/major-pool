@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Major Pool · Scoreboard · A — Editorial</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  darkMode: 'media',
+  theme: { extend: {
+    fontFamily: {
+      sans: ['Inter','ui-sans-serif','system-ui','sans-serif'],
+      serif: ['Fraunces','ui-serif','Georgia','serif'],
+    },
+    colors: {
+      canvas: '#FAFAF7', surface: '#FFFFFF', hairline: '#E7E5E0',
+      ink1: '#0A0A0A', ink2: '#5B5B58', ink3: '#9A9A95',
+      under: '#B8112C', brass: '#8A6A2B', live: '#E11D48',
+      dcanvas: '#0B0B0D', dsurface: '#131418', dhairline: '#23252B',
+      dink1: '#F5F4EE', dink2: '#A4A39C', dink3: '#6B6B66',
+      dunder: '#FF6B7E', dbrass: '#C9A75A', dlive: '#FB7185',
+    }
+  }}
+};
+</script>
+
+<style>
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* Concept nav */
+  .nav-link { padding: 6px 10px; border-radius: 999px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #5B5B58; }
+  .nav-link.active { background: rgba(10,10,10,0.06); color: #0A0A0A; }
+  @media (prefers-color-scheme: dark) {
+    .nav-link { color: #A4A39C; }
+    .nav-link.active { background: rgba(245,244,238,0.08); color: #F5F4EE; }
+  }
+
+  /* Row hover */
+  .row { transition: background-color 150ms ease; cursor: pointer; }
+  .row:hover { background-color: rgba(10,10,10,0.03); }
+  @media (prefers-color-scheme: dark) {
+    .row:hover { background-color: rgba(245,244,238,0.04); }
+  }
+
+  /* Top-3 brass left edge */
+  .top3 td:first-child { box-shadow: inset 2px 0 0 #8A6A2B; }
+  @media (prefers-color-scheme: dark) { .top3 td:first-child { box-shadow: inset 2px 0 0 #C9A75A; } }
+
+  /* Status badges — micro pills */
+  .badge { display: inline-flex; align-items: center; padding: 1px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1.4; }
+  .badge-cut { background: rgba(184,17,44,0.08); color: #B8112C; }
+  .badge-live { background: rgba(225,29,72,0.08); color: #E11D48; }
+  .badge-drop { background: rgba(10,10,10,0.05); color: #9A9A95; }
+  @media (prefers-color-scheme: dark) {
+    .badge-cut { background: rgba(255,107,126,0.10); color: #FF6B7E; }
+    .badge-live { background: rgba(251,113,133,0.10); color: #FB7185; }
+    .badge-drop { background: rgba(245,244,238,0.06); color: #6B6B66; }
+  }
+
+  /* Picks line — each pick a comma-separated entry */
+  .pick { color: #5B5B58; }
+  .pick .pick-name { color: #0A0A0A; }
+  .pick.dropped .pick-name, .pick.dropped .pick-score { text-decoration: line-through; color: #9A9A95; }
+  @media (prefers-color-scheme: dark) {
+    .pick { color: #A4A39C; }
+    .pick .pick-name { color: #F5F4EE; }
+    .pick.dropped .pick-name, .pick.dropped .pick-score { color: #6B6B66; }
+  }
+
+  /* LIVE pulse */
+  @keyframes livePulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+  .pulse { animation: livePulse 2s ease-in-out infinite; }
+
+  /* Row flash */
+  @keyframes rowFlash { 0% { background-color: rgba(10,10,10,0.06); } 100% { background-color: transparent; } }
+  @keyframes rowFlashDark { 0% { background-color: rgba(245,244,238,0.06); } 100% { background-color: transparent; } }
+  .flash { animation: rowFlash 1200ms ease-out; }
+  @media (prefers-color-scheme: dark) { .flash { animation: rowFlashDark 1200ms ease-out; } }
+
+  /* Sticky head */
+  thead.sticky-head th { position: sticky; top: 0; z-index: 5; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); background: rgba(255,255,255,0.92); border-bottom: 1px solid #E7E5E0; }
+  @media (prefers-color-scheme: dark) { thead.sticky-head th { background: rgba(19,20,24,0.92); border-bottom-color: #23252B; } }
+
+  /* Expanded round grid */
+  .detail-row { display: none; }
+  .detail-row.show { display: table-row; }
+  .round-cell { font-feature-settings: 'tnum'; }
+
+  /* Panel shadow */
+  .panel-shadow { box-shadow: 0 1px 2px rgba(10,10,10,0.04), 0 12px 32px -16px rgba(10,10,10,0.08); }
+  @media (prefers-color-scheme: dark) { .panel-shadow { box-shadow: 0 1px 2px rgba(0,0,0,0.4), 0 12px 32px -16px rgba(0,0,0,0.6); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pulse, .flash, .row { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+
+<body class="bg-canvas dark:bg-dcanvas text-ink1 dark:text-dink1 font-sans antialiased min-h-screen">
+
+  <main class="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-10">
+
+    <!-- Concept nav -->
+    <nav class="flex items-center gap-1 mb-6">
+      <span class="text-[11px] uppercase tracking-[0.1em] text-ink3 dark:text-dink3 mr-3">Concept</span>
+      <a class="nav-link active" href="a-editorial.html">A · Editorial</a>
+      <a class="nav-link" href="b-tactical.html">B · Tactical</a>
+      <a class="nav-link" href="c-cards.html">C · Cards</a>
+    </nav>
+
+    <!-- Panel -->
+    <section class="rounded-xl bg-surface dark:bg-dsurface panel-shadow overflow-hidden">
+
+      <!-- Header -->
+      <header class="px-5 sm:px-7 pt-6 pb-5 border-b border-hairline dark:border-dhairline">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <div class="text-[11px] uppercase tracking-[0.1em] text-ink3 dark:text-dink3 num">The Standings</div>
+            <h1 class="mt-1 font-serif text-[28px] sm:text-[32px] leading-none tracking-tight">
+              The Major Pool
+            </h1>
+            <p class="mt-2 text-[12px] text-ink2 dark:text-dink2 num">2026 PGA Championship · Round 4</p>
+          </div>
+
+          <button id="updateBtn" type="button"
+                  class="group inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[12px] text-ink2 dark:text-dink2 hover:bg-ink1/[0.04] dark:hover:bg-dink1/[0.04] transition-colors cursor-pointer"
+                  aria-label="Simulate live update">
+            <span class="relative flex h-1.5 w-1.5">
+              <span class="absolute inline-flex h-full w-full rounded-full bg-live dark:bg-dlive pulse"></span>
+              <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-live dark:bg-dlive"></span>
+            </span>
+            <span class="font-medium tracking-wide uppercase text-[10px]">Live</span>
+            <span class="text-ink3 dark:text-dink3 num" id="updatedLabel">Just now</span>
+          </button>
+        </div>
+
+        <!-- Stat strip -->
+        <dl class="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-4">
+          <div>
+            <dt class="text-[10px] uppercase tracking-[0.1em] text-ink3 dark:text-dink3">Leader</dt>
+            <dd class="mt-1 text-[14px] font-semibold text-ink1 dark:text-dink1" id="stat-leader">—</dd>
+          </div>
+          <div>
+            <dt class="text-[10px] uppercase tracking-[0.1em] text-ink3 dark:text-dink3">Score</dt>
+            <dd class="mt-1 text-[14px] font-semibold num text-under dark:text-dunder" id="stat-score">—</dd>
+          </div>
+          <div>
+            <dt class="text-[10px] uppercase tracking-[0.1em] text-ink3 dark:text-dink3">Cut Penalty</dt>
+            <dd class="mt-1 text-[14px] font-semibold num text-ink1 dark:text-dink1" id="stat-cut">—</dd>
+          </div>
+          <div>
+            <dt class="text-[10px] uppercase tracking-[0.1em] text-ink3 dark:text-dink3">Entries</dt>
+            <dd class="mt-1 text-[14px] font-semibold num text-ink1 dark:text-dink1" id="stat-entries">—</dd>
+          </div>
+        </dl>
+      </header>
+
+      <!-- Scoreboard table -->
+      <div class="relative">
+        <table class="w-full text-left">
+          <thead class="sticky-head">
+            <tr>
+              <th class="px-5 sm:px-7 py-2.5 text-[10px] font-medium uppercase tracking-[0.1em] text-ink3 dark:text-dink3 w-14">Pos</th>
+              <th class="px-2 py-2.5 text-[10px] font-medium uppercase tracking-[0.1em] text-ink3 dark:text-dink3">Entrant · Picks</th>
+              <th class="px-3 sm:px-5 py-2.5 text-[10px] font-medium uppercase tracking-[0.1em] text-ink3 dark:text-dink3 text-right">To Par</th>
+            </tr>
+          </thead>
+          <tbody id="board"></tbody>
+        </table>
+      </div>
+
+      <!-- Footer -->
+      <div class="px-5 sm:px-7 py-4 border-t border-hairline dark:border-dhairline text-[11px] text-ink3 dark:text-dink3 num">
+        Best 4 of 5 picks scored to par. Updates every 5 minutes from ESPN.
+      </div>
+    </section>
+
+    <p class="mt-4 text-center text-[11px] text-ink3 dark:text-dink3">Tap a row to see the per-round grid. Tap the live indicator to simulate an update.</p>
+
+  </main>
+
+<script src="data.js"></script>
+<script>
+const { GOLFERS, PAR, standings, cutPenalty, fmtToPar, pickLabel } = window.MOCK;
+const expanded = new Set();
+
+function renderStats(rows) {
+  const top = rows[0];
+  document.getElementById('stat-leader').textContent  = top ? top.entry.name : '—';
+  document.getElementById('stat-score').textContent   = top ? fmtToPar(top.toPar) : '—';
+  document.getElementById('stat-cut').textContent     = fmtToPar(cutPenalty());
+  document.getElementById('stat-entries').textContent = rows.length;
+}
+
+function pickHtml(p) {
+  const cls = ['pick'];
+  if (p.isDropped) cls.push('dropped');
+  const label = pickLabel(p);
+  const tag = label === 'MC' || label === 'WD'
+    ? ` <span class="badge badge-cut">${label}</span>`
+    : '';
+  const live = p.live ? ` <span class="badge badge-live">thru ${p.live.thru}</span>` : '';
+  return `<span class="${cls.join(' ')}">
+    <span class="num text-ink3 dark:text-dink3">${p.rank}.</span>
+    <span class="pick-name">${p.name}</span>
+    <span class="pick-score num text-ink2 dark:text-dink2">${fmtToPar(p.sum)}</span>${tag}${live}
+  </span>`;
+}
+
+function roundGrid(row) {
+  let html = `<div class="px-5 sm:px-7 py-4 bg-ink1/[0.02] dark:bg-dink1/[0.03] border-t border-hairline dark:border-dhairline">
+    <table class="w-full text-[12px] num">
+      <thead>
+        <tr class="text-ink3 dark:text-dink3 text-[10px] uppercase tracking-[0.08em]">
+          <th class="text-left py-1.5 pr-2">Pick</th>
+          <th class="text-right py-1.5 px-2 w-12">R1</th>
+          <th class="text-right py-1.5 px-2 w-12">R2</th>
+          <th class="text-right py-1.5 px-2 w-12">R3</th>
+          <th class="text-right py-1.5 px-2 w-12">R4</th>
+          <th class="text-right py-1.5 pl-2 w-14">Total</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+  // Sort picks back to rank order for the detail grid
+  const picks = [...row.picks].sort((a, b) => a.rank - b.rank);
+  picks.forEach(p => {
+    const droppedCls = p.isDropped ? 'line-through text-ink3 dark:text-dink3' : '';
+    const label = pickLabel(p);
+    const labelTag = label ? ` <span class="badge badge-cut">${label}</span>` : '';
+    let cells = '';
+    p.rounds.forEach((r, i) => {
+      if (r === null || r === undefined) {
+        const liveCell = p.live && i === p.played
+          ? `<td class="round-cell text-right px-2 py-1.5 text-live dark:text-dlive">thru ${p.live.thru}</td>`
+          : `<td class="round-cell text-right px-2 py-1.5 text-ink3 dark:text-dink3">—</td>`;
+        cells += liveCell;
+      } else {
+        const c = r < 0 ? 'text-under dark:text-dunder' : (r === 0 ? 'text-ink2 dark:text-dink2' : 'text-ink1 dark:text-dink1');
+        cells += `<td class="round-cell text-right px-2 py-1.5 ${c}">${fmtToPar(r)}</td>`;
+      }
+    });
+    const totalCls = p.sum < 0 ? 'text-under dark:text-dunder' : (p.sum === 0 ? 'text-ink2 dark:text-dink2' : 'text-ink1 dark:text-dink1');
+    html += `<tr class="${droppedCls}">
+      <td class="py-1.5 pr-2 text-ink1 dark:text-dink1"><span class="num text-ink3 dark:text-dink3">${p.rank}.</span> ${p.name}${labelTag}</td>
+      ${cells}
+      <td class="text-right py-1.5 pl-2 font-semibold ${totalCls}">${fmtToPar(p.sum)}</td>
+    </tr>`;
+  });
+
+  const teamCls = row.toPar < 0 ? 'text-under dark:text-dunder' : (row.toPar === 0 ? 'text-ink2 dark:text-dink2' : 'text-ink1 dark:text-dink1');
+  html += `<tr class="border-t border-hairline dark:border-dhairline">
+    <td class="py-2 pr-2 text-[11px] uppercase tracking-[0.08em] text-ink3 dark:text-dink3">Best 4 of 5 · Tiebreaker ${fmtToPar(row.entry.tiebreaker)}</td>
+    <td colspan="4"></td>
+    <td class="text-right py-2 pl-2 font-semibold ${teamCls}">${fmtToPar(row.toPar)}</td>
+  </tr>`;
+
+  html += `</tbody></table>
+    ${row.livePicks > 0 ? `<div class="mt-2 text-[11px] text-ink3 dark:text-dink3 num">${row.liveHolesLeft} ${row.liveHolesLeft === 1 ? 'hole' : 'holes'} left today across ${row.livePicks} live pick${row.livePicks === 1 ? '' : 's'}</div>` : ''}
+  </div>`;
+
+  return html;
+}
+
+function render() {
+  const rows = standings();
+  renderStats(rows);
+
+  const tbody = document.getElementById('board');
+  let html = '';
+  rows.forEach((row, i) => {
+    const isTop3 = i < 3;
+    const isLeader = i === 0;
+    const posHtml = isLeader
+      ? `<span class="font-serif italic font-medium text-[18px] text-ink1 dark:text-dink1">${row.posDisplay}</span>`
+      : `<span class="text-ink2 dark:text-dink2 num font-medium">${row.posDisplay}</span>`;
+
+    const scoreColor = row.toPar < 0 ? 'text-under dark:text-dunder' : 'text-ink1 dark:text-dink1';
+    const scoreSize = isLeader ? 'text-[24px]' : 'text-[22px]';
+
+    // Picks rendered in rank order, separated by middle-dot
+    const picksOrdered = [...row.picks].sort((a, b) => a.rank - b.rank);
+    const picksLine = picksOrdered.map(pickHtml).join('<span class="text-ink3 dark:text-dink3 mx-1.5">·</span>');
+
+    const isOpen = expanded.has(row.entry.id);
+
+    html += `
+      <tr class="row border-b border-hairline dark:border-dhairline ${isTop3 ? 'top3' : ''}" data-id="${row.entry.id}">
+        <td class="px-5 sm:px-7 py-3.5 align-top">
+          ${posHtml}
+        </td>
+        <td class="px-2 py-3.5 align-top">
+          <div class="font-semibold text-[15px] text-ink1 dark:text-dink1 leading-tight">${row.entry.name}</div>
+          <div class="text-[12px] leading-relaxed mt-1.5">${picksLine}</div>
+        </td>
+        <td class="px-3 sm:px-5 py-3.5 align-top text-right">
+          <div class="font-semibold ${scoreSize} ${scoreColor} num leading-none">${fmtToPar(row.toPar)}</div>
+          <div class="text-[11px] text-ink3 dark:text-dink3 num mt-1.5">thru ${row.roundsScored} of 4 rounds</div>
+        </td>
+      </tr>
+      <tr class="detail-row ${isOpen ? 'show' : ''}" data-detail-for="${row.entry.id}">
+        <td colspan="3" class="p-0">${roundGrid(row)}</td>
+      </tr>`;
+  });
+  tbody.innerHTML = html;
+
+  // Wire click-to-expand
+  tbody.querySelectorAll('tr.row').forEach(tr => {
+    tr.addEventListener('click', () => {
+      const id = tr.dataset.id;
+      const detail = tbody.querySelector(`tr.detail-row[data-detail-for="${id}"]`);
+      const nowOpen = !expanded.has(id);
+      if (nowOpen) expanded.add(id); else expanded.delete(id);
+      detail.classList.toggle('show', nowOpen);
+    });
+  });
+}
+
+let fetchedAt = Date.now();
+function refreshTimestamp() {
+  const mins = Math.floor((Date.now() - fetchedAt) / 60000);
+  const el = document.getElementById('updatedLabel');
+  if (mins < 1) el.textContent = 'Just now';
+  else el.textContent = mins + ' min ago';
+}
+setInterval(refreshTimestamp, 20000);
+
+document.getElementById('updateBtn').addEventListener('click', () => {
+  // Simulate: nudge a few golfers' live thru and re-render with flash on changed entries
+  Object.values(GOLFERS).forEach(g => {
+    if (g.live && g.live.thru < 18) g.live.thru = Math.min(18, g.live.thru + 2);
+  });
+  fetchedAt = Date.now();
+  refreshTimestamp();
+  render();
+  // Flash a random subset of rows to indicate update
+  const trs = [...document.querySelectorAll('#board tr.row')];
+  trs.slice(0, 5).forEach(tr => {
+    tr.classList.add('flash');
+    tr.addEventListener('animationend', () => tr.classList.remove('flash'), { once: true });
+  });
+});
+
+render();
+</script>
+</body>
+</html>

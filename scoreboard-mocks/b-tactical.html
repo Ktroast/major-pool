@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Major Pool · Scoreboard · B — Tactical</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  darkMode: 'media',
+  theme: { extend: {
+    fontFamily: {
+      sans: ['Inter','ui-sans-serif','system-ui','sans-serif'],
+      mono: ['JetBrains Mono','ui-monospace','SFMono-Regular','Menlo','monospace'],
+    },
+    colors: {
+      // Cooler slate-leaning palette — terminal feel
+      canvas: '#F4F5F7', surface: '#FFFFFF', hairline: '#E2E5EA',
+      ink1: '#0F172A', ink2: '#475569', ink3: '#94A3B8',
+      under: '#B8112C', live: '#E11D48', accent: '#0F766E',
+      dcanvas: '#0A0E15', dsurface: '#10141C', dhairline: '#1E2530',
+      dink1: '#E2E8F0', dink2: '#94A3B8', dink3: '#5D6878',
+      dunder: '#FF6B7E', dlive: '#FB7185', daccent: '#5EEAD4',
+    }
+  }}
+};
+</script>
+
+<style>
+  .num { font-variant-numeric: tabular-nums; }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+  /* Concept nav */
+  .nav-link { padding: 6px 10px; border-radius: 4px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #94A3B8; font-family: 'JetBrains Mono', monospace; }
+  .nav-link.active { background: #0F172A; color: #F4F5F7; }
+  @media (prefers-color-scheme: dark) {
+    .nav-link { color: #5D6878; }
+    .nav-link.active { background: #E2E8F0; color: #0A0E15; }
+  }
+
+  /* Row hover */
+  .row { transition: background-color 120ms ease; }
+  .row:hover { background-color: rgba(15,23,42,0.025); }
+  @media (prefers-color-scheme: dark) { .row:hover { background-color: rgba(226,232,240,0.03); } }
+
+  /* Pick chip */
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 6px; border-radius: 3px;
+    font-size: 10.5px; font-family: 'JetBrains Mono', monospace;
+    background: rgba(15,23,42,0.04); color: #0F172A;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+  .chip .chip-rank { color: #94A3B8; }
+  .chip .chip-score { font-weight: 600; }
+  .chip-neg .chip-score { color: #B8112C; }
+  .chip-mc { background: rgba(184,17,44,0.06); color: #B8112C; }
+  .chip-mc .chip-rank, .chip-mc .chip-score { color: #B8112C; }
+  .chip-wd { background: rgba(184,17,44,0.06); color: #B8112C; opacity: 0.7; }
+  .chip-live { border-color: #E11D48; box-shadow: 0 0 0 1px rgba(225,29,72,0.15); }
+  .chip-drop { opacity: 0.4; text-decoration: line-through; }
+
+  @media (prefers-color-scheme: dark) {
+    .chip { background: rgba(226,232,240,0.06); color: #E2E8F0; }
+    .chip .chip-rank { color: #5D6878; }
+    .chip-neg .chip-score { color: #FF6B7E; }
+    .chip-mc { background: rgba(255,107,126,0.10); color: #FF6B7E; }
+    .chip-mc .chip-rank, .chip-mc .chip-score { color: #FF6B7E; }
+    .chip-live { border-color: #FB7185; box-shadow: 0 0 0 1px rgba(251,113,133,0.20); }
+  }
+
+  /* Round sparkline cells (entry-level best-4 round sums) */
+  .spark { display: inline-flex; gap: 2px; }
+  .spark-cell {
+    width: 30px; height: 22px; display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 500;
+    background: rgba(15,23,42,0.04); color: #475569; border-radius: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+  .spark-cell.neg { background: rgba(184,17,44,0.07); color: #B8112C; }
+  .spark-cell.empty { color: #94A3B8; background: transparent; border: 1px dashed rgba(148,163,184,0.3); }
+  .spark-cell.live { background: rgba(225,29,72,0.10); color: #E11D48; border: 1px solid rgba(225,29,72,0.4); }
+  @media (prefers-color-scheme: dark) {
+    .spark-cell { background: rgba(226,232,240,0.05); color: #94A3B8; }
+    .spark-cell.neg { background: rgba(255,107,126,0.10); color: #FF6B7E; }
+    .spark-cell.empty { color: #5D6878; border-color: rgba(93,104,120,0.3); }
+    .spark-cell.live { background: rgba(251,113,133,0.12); color: #FB7185; border-color: rgba(251,113,133,0.4); }
+  }
+
+  /* Pos column — terminal-style */
+  .pos-cell { font-family: 'JetBrains Mono', monospace; font-feature-settings: 'tnum'; }
+
+  /* LIVE pulse */
+  @keyframes livePulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .pulse { animation: livePulse 1.6s ease-in-out infinite; }
+
+  /* Row flash */
+  @keyframes rowFlash { 0% { background-color: rgba(225,29,72,0.10); } 100% { background-color: transparent; } }
+  @keyframes rowFlashDark { 0% { background-color: rgba(251,113,133,0.10); } 100% { background-color: transparent; } }
+  .flash { animation: rowFlash 1000ms ease-out; }
+  @media (prefers-color-scheme: dark) { .flash { animation: rowFlashDark 1000ms ease-out; } }
+
+  /* Sticky head */
+  thead.sticky-head th { position: sticky; top: 0; z-index: 5; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); background: rgba(255,255,255,0.95); border-bottom: 1px solid #E2E5EA; }
+  @media (prefers-color-scheme: dark) { thead.sticky-head th { background: rgba(16,20,28,0.95); border-bottom-color: #1E2530; } }
+
+  /* Panel — flatter, sharper than Concept A */
+  .panel { border: 1px solid #E2E5EA; border-radius: 6px; }
+  @media (prefers-color-scheme: dark) { .panel { border-color: #1E2530; } }
+
+  /* Top-3 left rule — accent teal */
+  .top3 td:first-child { box-shadow: inset 3px 0 0 #0F766E; }
+  @media (prefers-color-scheme: dark) { .top3 td:first-child { box-shadow: inset 3px 0 0 #5EEAD4; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pulse, .flash, .row { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+
+<body class="bg-canvas dark:bg-dcanvas text-ink1 dark:text-dink1 font-sans antialiased min-h-screen">
+
+  <main class="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-8">
+
+    <!-- Concept nav -->
+    <nav class="flex items-center gap-1 mb-5">
+      <span class="text-[11px] uppercase tracking-[0.1em] text-ink3 dark:text-dink3 mr-3 mono">Concept</span>
+      <a class="nav-link" href="a-editorial.html">A · Editorial</a>
+      <a class="nav-link active" href="b-tactical.html">B · Tactical</a>
+      <a class="nav-link" href="c-cards.html">C · Cards</a>
+    </nav>
+
+    <!-- Header strip (outside the panel, terminal-style) -->
+    <header class="flex flex-wrap items-end justify-between gap-4 mb-4">
+      <div>
+        <div class="text-[10px] uppercase tracking-[0.15em] text-ink3 dark:text-dink3 mono">MAJOR_POOL // STANDINGS</div>
+        <h1 class="mt-1 text-[22px] font-semibold tracking-tight">2026 PGA Championship</h1>
+        <p class="text-[12px] text-ink2 dark:text-dink2 mono">round_4 · best_4_of_5 · scoring_to_par</p>
+      </div>
+
+      <button id="updateBtn" type="button"
+              class="inline-flex items-center gap-2 rounded-md border border-hairline dark:border-dhairline px-3 py-2 text-[11px] mono uppercase tracking-wide text-ink2 dark:text-dink2 hover:bg-ink1/[0.04] dark:hover:bg-dink1/[0.04] transition-colors cursor-pointer">
+        <span class="relative flex h-1.5 w-1.5">
+          <span class="absolute inline-flex h-full w-full rounded-full bg-live dark:bg-dlive pulse"></span>
+          <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-live dark:bg-dlive"></span>
+        </span>
+        <span>LIVE</span>
+        <span class="text-ink3 dark:text-dink3" id="updatedLabel">00:00</span>
+      </button>
+    </header>
+
+    <!-- Stat strip — dense single line -->
+    <div class="panel bg-surface dark:bg-dsurface mb-4 grid grid-cols-2 sm:grid-cols-4 divide-x divide-hairline dark:divide-dhairline">
+      <div class="px-4 py-3">
+        <div class="text-[9px] uppercase tracking-[0.15em] text-ink3 dark:text-dink3 mono">leader</div>
+        <div class="mt-1 text-[13px] font-semibold truncate" id="stat-leader">—</div>
+      </div>
+      <div class="px-4 py-3">
+        <div class="text-[9px] uppercase tracking-[0.15em] text-ink3 dark:text-dink3 mono">score</div>
+        <div class="mt-1 text-[18px] font-semibold num mono text-under dark:text-dunder" id="stat-score">—</div>
+      </div>
+      <div class="px-4 py-3">
+        <div class="text-[9px] uppercase tracking-[0.15em] text-ink3 dark:text-dink3 mono">cut_penalty</div>
+        <div class="mt-1 text-[18px] font-semibold num mono" id="stat-cut">—</div>
+      </div>
+      <div class="px-4 py-3">
+        <div class="text-[9px] uppercase tracking-[0.15em] text-ink3 dark:text-dink3 mono">entries</div>
+        <div class="mt-1 text-[18px] font-semibold num mono" id="stat-entries">—</div>
+      </div>
+    </div>
+
+    <!-- Scoreboard table -->
+    <div class="panel bg-surface dark:bg-dsurface overflow-hidden">
+      <table class="w-full text-left">
+        <thead class="sticky-head">
+          <tr>
+            <th class="px-3 sm:px-5 py-2.5 text-[10px] mono uppercase tracking-[0.1em] text-ink3 dark:text-dink3 w-12">pos</th>
+            <th class="px-2 py-2.5 text-[10px] mono uppercase tracking-[0.1em] text-ink3 dark:text-dink3 w-48">entrant</th>
+            <th class="px-2 py-2.5 text-[10px] mono uppercase tracking-[0.1em] text-ink3 dark:text-dink3 hidden md:table-cell w-36">rounds</th>
+            <th class="px-2 py-2.5 text-[10px] mono uppercase tracking-[0.1em] text-ink3 dark:text-dink3">picks · best_4 of 5</th>
+            <th class="px-3 sm:px-5 py-2.5 text-[10px] mono uppercase tracking-[0.1em] text-ink3 dark:text-dink3 text-right w-24">to_par</th>
+          </tr>
+        </thead>
+        <tbody id="board"></tbody>
+      </table>
+    </div>
+
+    <p class="mt-3 text-center text-[10px] mono uppercase tracking-[0.1em] text-ink3 dark:text-dink3">tap LIVE to simulate update · rounds column shows entry-level best_4 round totals</p>
+
+  </main>
+
+<script src="data.js"></script>
+<script>
+const { GOLFERS, PAR, standings, cutPenalty, fmtToPar, pickLabel } = window.MOCK;
+
+// For each entry, compute the per-round best-4 contribution (sum of best 4 picks' Ri values).
+// If R4 contains any live pick, mark that cell as live.
+function entryRoundSums(row) {
+  // Determine the 4 kept picks (already inferred from row.picks, isDropped=false)
+  const kept = row.picks.filter(p => !p.isDropped);
+  const sums = [0,0,0,0];
+  const hasLiveAtRound = [false,false,false,false];
+  const hasDataAtRound = [false,false,false,false];
+  kept.forEach(p => {
+    p.rounds.forEach((r, i) => {
+      if (r !== null && r !== undefined) {
+        sums[i] += r;
+        hasDataAtRound[i] = true;
+      }
+      if (p.live && i === p.played) {
+        hasLiveAtRound[i] = true;
+      }
+    });
+  });
+  return sums.map((s, i) => ({
+    value: s,
+    hasData: hasDataAtRound[i],
+    isLive: hasLiveAtRound[i] && !hasDataAtRound[i],
+  }));
+}
+
+function renderStats(rows) {
+  document.getElementById('stat-leader').textContent  = rows[0]?.entry.name ?? '—';
+  document.getElementById('stat-score').textContent   = rows[0] ? fmtToPar(rows[0].toPar) : '—';
+  document.getElementById('stat-cut').textContent     = fmtToPar(cutPenalty());
+  document.getElementById('stat-entries').textContent = String(rows.length).padStart(2, '0');
+}
+
+function chipHtml(p) {
+  const cls = ['chip'];
+  const label = pickLabel(p);
+  if (p.isDropped) cls.push('chip-drop');
+  if (label === 'MC') cls.push('chip-mc');
+  else if (label === 'WD') cls.push('chip-wd');
+  else if (p.sum < 0) cls.push('chip-neg');
+  if (p.live) cls.push('chip-live');
+
+  // Compact name — use last name only
+  const lastName = p.name.split(' ').slice(-1)[0];
+  const labelTag = label ? ` ${label}` : '';
+  const liveTag = p.live ? `·${p.live.thru}` : '';
+  return `<span class="${cls.join(' ')}" title="${p.name} · ${fmtToPar(p.sum)}${labelTag}">
+    <span class="chip-rank">${p.rank}</span>
+    <span>${lastName}</span>
+    <span class="chip-score">${fmtToPar(p.sum)}${liveTag}</span>
+  </span>`;
+}
+
+function sparkHtml(row) {
+  const sums = entryRoundSums(row);
+  return `<span class="spark">${sums.map(s => {
+    if (s.isLive) return `<span class="spark-cell live">·</span>`;
+    if (!s.hasData) return `<span class="spark-cell empty">—</span>`;
+    const cls = s.value < 0 ? 'spark-cell neg' : 'spark-cell';
+    return `<span class="${cls}">${fmtToPar(s.value)}</span>`;
+  }).join('')}</span>`;
+}
+
+function render() {
+  const rows = standings();
+  renderStats(rows);
+
+  const tbody = document.getElementById('board');
+  let html = '';
+  rows.forEach((row, i) => {
+    const isTop3 = i < 3;
+    const scoreColor = row.toPar < 0 ? 'text-under dark:text-dunder' : 'text-ink1 dark:text-dink1';
+
+    // Picks ordered by rank for stable horizontal scan
+    const picks = [...row.picks].sort((a, b) => a.rank - b.rank);
+    const chips = picks.map(chipHtml).join(' ');
+
+    const liveSummary = row.livePicks > 0
+      ? `<span class="text-[10px] mono uppercase tracking-wide text-live dark:text-dlive ml-1">· ${row.liveHolesLeft}h left</span>`
+      : '';
+
+    html += `
+      <tr class="row border-b border-hairline dark:border-dhairline ${isTop3 ? 'top3' : ''}">
+        <td class="px-3 sm:px-5 py-2.5 pos-cell text-[13px] font-semibold ${isTop3 ? 'text-ink1 dark:text-dink1' : 'text-ink2 dark:text-dink2'}">${row.posDisplay}</td>
+        <td class="px-2 py-2.5 align-middle">
+          <div class="font-semibold text-[13px] leading-tight">${row.entry.name}</div>
+          <div class="text-[10px] mono uppercase tracking-wide text-ink3 dark:text-dink3 mt-0.5">tb ${fmtToPar(row.entry.tiebreaker)}${liveSummary}</div>
+        </td>
+        <td class="px-2 py-2.5 align-middle hidden md:table-cell">${sparkHtml(row)}</td>
+        <td class="px-2 py-2.5 align-middle">
+          <div class="flex flex-wrap gap-1.5">${chips}</div>
+        </td>
+        <td class="px-3 sm:px-5 py-2.5 text-right">
+          <div class="text-[20px] font-semibold mono num ${scoreColor} leading-none">${fmtToPar(row.toPar)}</div>
+          <div class="text-[10px] mono uppercase tracking-wide text-ink3 dark:text-dink3 mt-1">R${row.roundsScored}/4</div>
+        </td>
+      </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+let fetchedAt = Date.now();
+function refreshTimestamp() {
+  const elapsed = Math.floor((Date.now() - fetchedAt) / 1000);
+  const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const ss = String(elapsed % 60).padStart(2, '0');
+  document.getElementById('updatedLabel').textContent = `${mm}:${ss}`;
+}
+setInterval(refreshTimestamp, 1000);
+
+document.getElementById('updateBtn').addEventListener('click', () => {
+  Object.values(GOLFERS).forEach(g => {
+    if (g.live && g.live.thru < 18) g.live.thru = Math.min(18, g.live.thru + 2);
+  });
+  fetchedAt = Date.now();
+  refreshTimestamp();
+  render();
+  [...document.querySelectorAll('#board tr.row')].slice(0, 6).forEach(tr => {
+    tr.classList.add('flash');
+    tr.addEventListener('animationend', () => tr.classList.remove('flash'), { once: true });
+  });
+});
+
+render();
+refreshTimestamp();
+</script>
+</body>
+</html>

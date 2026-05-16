@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Major Pool · The 2026 Masters · Premium</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:wght@400;500;600;700;800&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:          #0C0A09;
+    --bg-1:         #0A0908;
+    --bg-2:         #1C1917;
+    --bg-3:         #2A2522;
+    --surface:      rgba(40, 33, 28, 0.55);
+    --surface-hi:   rgba(56, 48, 41, 0.7);
+    --hairline:     rgba(202, 138, 4, 0.12);
+    --hairline-hi:  rgba(202, 138, 4, 0.35);
+    --gold:         #CA8A04;
+    --gold-hi:      #FBBF24;
+    --gold-soft:    #78350F;
+    --text:         #FAFAF9;
+    --text-muted:   #A8A29E;
+    --red:          #DC2626;
+    --green:        #16A34A;
+  }
+  html, body {
+    background:
+      radial-gradient(ellipse at top, #2A1F18 0%, #0A0908 55%),
+      linear-gradient(180deg, #0A0908 0%, #1C1917 100%);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: 'Jost', sans-serif;
+    min-height: 100vh;
+  }
+  .font-display { font-family: 'Bodoni Moda', serif; letter-spacing: -0.01em; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .text-muted { color: var(--text-muted); }
+
+  /* Glass surface */
+  .glass {
+    background: var(--surface);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    border: 1px solid var(--hairline);
+    border-radius: 14px;
+  }
+  .glass-hi {
+    background: var(--surface-hi);
+    backdrop-filter: blur(22px) saturate(160%);
+    border: 1px solid var(--hairline-hi);
+  }
+
+  /* Live dot — gold pulse with glow */
+  .live-dot {
+    width: 8px; height: 8px; border-radius: 999px;
+    background: var(--gold-hi);
+    box-shadow:
+      0 0 0 0 rgba(251, 191, 36, 0.6),
+      0 0 8px 1px rgba(251, 191, 36, 0.4);
+    animation: pulseGold 1.8s ease-in-out infinite;
+  }
+  @keyframes pulseGold {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.55), 0 0 8px 1px rgba(251, 191, 36, 0.4); }
+    50%      { box-shadow: 0 0 0 8px rgba(251, 191, 36, 0),    0 0 12px 3px rgba(251, 191, 36, 0.25); }
+  }
+  @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+
+  /* Tier badges — metallic micro-pills */
+  .tier-pill {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 999px;
+    font-family: 'Bodoni Moda', serif; font-weight: 700; font-size: 11px;
+    border: 1px solid;
+  }
+  .tier-A {
+    background: linear-gradient(140deg, #FCD34D 0%, #B45309 100%);
+    color: #1C1206; border-color: rgba(252, 211, 77, 0.5);
+  }
+  .tier-B {
+    background: linear-gradient(140deg, #E5E7EB 0%, #6B7280 100%);
+    color: #1F2937; border-color: rgba(229, 231, 235, 0.4);
+  }
+  .tier-C {
+    background: linear-gradient(140deg, #FB923C 0%, #9A3412 100%);
+    color: #1C0A03; border-color: rgba(251, 146, 60, 0.45);
+  }
+  .tier-D {
+    background: linear-gradient(140deg, #84CC16 0%, #3F6212 100%);
+    color: #0E1A06; border-color: rgba(132, 204, 22, 0.4);
+  }
+  .tier-E {
+    background: linear-gradient(140deg, #475569 0%, #1E293B 100%);
+    color: #E5E7EB; border-color: rgba(100, 116, 139, 0.4);
+  }
+
+  /* Score color */
+  .score-neg { color: var(--gold-hi); }
+  .score-pos { color: var(--text); }
+  .score-par { color: var(--text-muted); }
+  .score-leader { color: var(--gold-hi); text-shadow: 0 0 24px rgba(251, 191, 36, 0.25); }
+
+  /* Row hover */
+  .row { transition: all 200ms ease; cursor: pointer; }
+  .row:hover { background: rgba(202, 138, 4, 0.05); border-left-color: var(--gold) !important; }
+
+  /* Dropped */
+  .dropped { opacity: 0.4; }
+
+  /* Subtle vignette divider */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(202, 138, 4, 0.25) 50%, transparent 100%);
+  }
+
+  /* Top-1 podium glow */
+  .crown-glow {
+    box-shadow:
+      inset 0 0 60px rgba(202, 138, 4, 0.12),
+      0 12px 40px rgba(202, 138, 4, 0.18);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+  }
+</style>
+</head>
+<body>
+
+  <!-- Sticky top bar -->
+  <header class="sticky top-0 z-40 glass border-x-0 border-t-0 rounded-none">
+    <div class="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="font-display text-xl font-semibold tracking-tight">Major Pool</div>
+        <span class="h-4 w-px bg-amber-700/40"></span>
+        <span class="text-xs uppercase tracking-[0.18em] text-muted">PIN · MASTERS26</span>
+      </div>
+      <nav class="flex items-center gap-1 text-sm">
+        <button class="px-3 py-1.5 rounded-full glass-hi text-[var(--gold-hi)] font-medium">Scores</button>
+        <button class="px-3 py-1.5 rounded-full text-muted hover:text-white transition-colors">Entries</button>
+        <button class="px-3 py-1.5 rounded-full text-muted hover:text-white transition-colors">Setup</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="max-w-6xl mx-auto px-6 pt-10 pb-6">
+    <div class="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-[var(--gold-hi)] mb-3">
+      <span class="live-dot"></span>
+      <span>Round 3 in progress</span>
+    </div>
+    <h1 class="font-display text-5xl md:text-6xl font-semibold leading-[0.95]">
+      The 89<span class="text-[var(--gold-hi)]">th</span> Masters
+    </h1>
+    <p class="text-muted mt-3 text-lg font-light">Augusta National &middot; April 11, 2026</p>
+
+    <!-- KPI strip -->
+    <div class="mt-8 grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div class="glass p-4">
+        <div class="text-[10px] uppercase tracking-widest text-muted">Round</div>
+        <div class="font-display text-2xl font-semibold mt-1 tabular">3<span class="text-muted text-base font-light"> / 4</span></div>
+      </div>
+      <div class="glass p-4">
+        <div class="text-[10px] uppercase tracking-widest text-muted">Leader</div>
+        <div class="font-display text-2xl font-semibold mt-1 score-leader tabular">-18</div>
+      </div>
+      <div class="glass p-4">
+        <div class="text-[10px] uppercase tracking-widest text-muted">Cut line</div>
+        <div class="font-display text-2xl font-semibold mt-1 tabular">+3</div>
+      </div>
+      <div class="glass p-4">
+        <div class="text-[10px] uppercase tracking-widest text-muted">Entries</div>
+        <div class="font-display text-2xl font-semibold mt-1 tabular">74</div>
+      </div>
+      <div class="glass p-4">
+        <div class="text-[10px] uppercase tracking-widest text-muted">Format</div>
+        <div class="font-display text-base font-semibold mt-1">Best 4 of 5</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Podium -->
+  <section class="max-w-6xl mx-auto px-6 pt-4 pb-10">
+    <div class="flex items-baseline justify-between mb-4">
+      <h2 class="font-display text-3xl">The Podium</h2>
+      <span class="text-xs uppercase tracking-[0.18em] text-muted">Top 3</span>
+    </div>
+    <div id="podium" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+  </section>
+
+  <div class="divider max-w-6xl mx-auto"></div>
+
+  <!-- Filter row -->
+  <section class="max-w-6xl mx-auto px-6 pt-8 pb-4">
+    <div class="flex items-center gap-4 flex-wrap">
+      <h2 class="font-display text-3xl">The Field</h2>
+      <span class="text-xs uppercase tracking-[0.18em] text-muted">Ranks 4–74</span>
+      <div class="ml-auto flex items-center gap-2">
+        <div class="flex items-center gap-2 text-xs text-muted">
+          <span class="live-dot"></span> live
+        </div>
+        <input id="search" type="text" placeholder="Search entries…"
+          class="glass px-4 py-2 text-sm w-56 max-w-full focus:outline-none focus:border-amber-500/50 transition-colors placeholder:text-stone-500" />
+      </div>
+    </div>
+  </section>
+
+  <!-- Leaderboard -->
+  <section class="max-w-6xl mx-auto px-6 pb-20">
+    <!-- Column header -->
+    <div class="grid grid-cols-12 gap-3 px-4 py-2 text-[10px] uppercase tracking-[0.18em] text-muted">
+      <div class="col-span-1">Pos</div>
+      <div class="col-span-3">Entry</div>
+      <div class="col-span-6">Roster &middot; A · B · C · D · E</div>
+      <div class="col-span-1 text-right">Thru</div>
+      <div class="col-span-1 text-right">Total</div>
+    </div>
+    <div id="leaderboard" class="space-y-1.5"></div>
+  </section>
+
+  <footer class="max-w-6xl mx-auto px-6 pb-10 text-xs text-muted flex items-center justify-between">
+    <span>Live data &middot; ESPN feed &middot; refreshed every 5 min</span>
+    <span>2:47 PM ET</span>
+  </footer>
+
+<script>
+  // ── Shared seeded data generator ─────────────────────────────────────
+  const golfersByTier = {
+    A: ['Scottie Scheffler','Rory McIlroy','Jon Rahm','Xander Schauffele','Collin Morikawa','Viktor Hovland','Ludvig Åberg','Bryson DeChambeau'],
+    B: ['Patrick Cantlay','Justin Thomas','Wyndham Clark','Tony Finau','Sahith Theegala','Hideki Matsuyama','Tommy Fleetwood','Brooks Koepka'],
+    C: ['Sungjae Im','Jordan Spieth','Cameron Smith','Russell Henley','Sepp Straka','Tom Kim','Sam Burns','Joaquin Niemann'],
+    D: ['Min Woo Lee','Akshay Bhatia','Robert MacIntyre','Maverick McNealy','Si Woo Kim','Adam Scott','Corey Conners','Eric Cole'],
+    E: ['Justin Rose','Chris Kirk','Stephan Jaeger','Davis Thompson','Taylor Pendrith','Erik van Rooyen','Mackenzie Hughes','J.T. Poston']
+  };
+  const firstNames = ['Keenan','Mike','Sarah','Tom','Alex','Jamie','Pat','Chris','Ryan','Drew','Kate','Ben','Jess','Sam','Will','Andy','Megan','Luke','Owen','Beth','Nate','Liz','Joe','Maddy','Connor','Ethan','Hannah','Ian','Jordan','Kyle','Logan','Mia','Noah','Olivia','Quinn','Riley','Tyler','Vince','Wes','Zoe','Abby','Brian','Cara','Dan','Erin','Finn','Gus','Holly','Ivy','Jake','Kim','Leo','Mark','Nick','Paige','Reese','Scott','Theo','Uma','Vera','Wendy','Cody','Brooke','Hugo','Iris','Casey','Lane','Reid','Pearl','Asa','Mel','Rob','Tess','Vic'];
+
+  function mulberry32(seed){let a=seed;return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+  const rand = mulberry32(42);
+  const pick = arr => arr[Math.floor(rand()*arr.length)];
+
+  function generateTeams() {
+    const teams = [];
+    const usedPairs = new Set();
+    for (let i = 0; i < 74; i++) {
+      let p1, p2, key;
+      do { p1 = pick(firstNames); p2 = pick(firstNames); key = [p1,p2].sort().join('|'); }
+      while (p1 === p2 || usedPairs.has(key));
+      usedPairs.add(key);
+      const golfers = ['A','B','C','D','E'].map(tier => ({ tier, name: pick(golfersByTier[tier]) }));
+      const frac = i / 73;
+      const targetTotal = -18 + frac * 26 + (rand() - 0.5) * 3;
+      golfers.forEach(g => {
+        g.score = Math.round(targetTotal / 4 + (rand() - 0.5) * 6);
+        g.cut = rand() < 0.06;
+        if (g.cut) g.score = Math.max(g.score, 4) + 6;
+      });
+      let dropIdx = 0;
+      golfers.forEach((g, k) => { if (g.score > golfers[dropIdx].score) dropIdx = k; });
+      const counted = golfers.filter((_, k) => k !== dropIdx);
+      const total = counted.reduce((s, g) => s + g.score, 0);
+      const isLive = rand() < 0.18;
+      teams.push({ players: [p1, p2], golfers, dropIdx, total, isLive, thru: isLive ? 10 + Math.floor(rand()*8) : 18 });
+    }
+    teams.sort((a, b) => a.total - b.total);
+    teams.forEach((t, i) => t.rank = i + 1);
+    return teams;
+  }
+
+  const teams = generateTeams();
+  const fmt = n => n > 0 ? '+' + n : (n === 0 ? 'E' : String(n));
+  const scoreClass = (n, isLeader) => isLeader ? 'score-leader' : n < 0 ? 'score-neg' : (n > 0 ? 'score-pos' : 'score-par');
+
+  // ── Podium (top 3) ────────────────────────────────────────────────────
+  const podiumEl = document.getElementById('podium');
+  podiumEl.innerHTML = teams.slice(0, 3).map((t, i) => {
+    const isLeader = i === 0;
+    const orderClass = i === 0 ? 'md:order-2 md:scale-105' : i === 1 ? 'md:order-1' : 'md:order-3';
+    return `
+      <article class="glass ${isLeader ? 'crown-glow' : ''} p-6 ${orderClass} transition-transform">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="text-[10px] uppercase tracking-[0.2em] ${isLeader ? 'text-[var(--gold-hi)]' : 'text-muted'} mb-1">
+              ${i === 0 ? 'Leader' : i === 1 ? '2nd' : '3rd'}
+            </div>
+            <div class="font-display text-3xl font-semibold">${t.players.join(' &amp; ')}</div>
+          </div>
+          ${t.isLive ? '<span class="live-dot mt-2"></span>' : ''}
+        </div>
+
+        <div class="my-5 flex items-baseline gap-3">
+          <span class="font-display text-7xl font-semibold tabular leading-none ${scoreClass(t.total, isLeader)}">${fmt(t.total)}</span>
+          <div class="text-xs text-muted">
+            <div>Thru</div>
+            <div class="text-white tabular">${t.thru === 18 ? 'F' : t.thru}</div>
+          </div>
+        </div>
+
+        <div class="border-t border-amber-700/15 pt-4 space-y-1.5">
+          ${t.golfers.map((g, k) => `
+            <div class="flex items-center gap-3 text-sm ${k === t.dropIdx ? 'dropped' : ''}">
+              <span class="tier-pill tier-${g.tier}">${g.tier}</span>
+              <span class="flex-1 truncate font-light">${g.name}</span>
+              <span class="tabular font-medium ${scoreClass(g.score)} ${k === t.dropIdx ? 'line-through' : ''}">${fmt(g.score)}</span>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="mt-4 text-[10px] uppercase tracking-[0.18em] text-muted">
+          ${i === 0 ? 'Holding the lead' : i === 1 ? `${Math.abs(t.total - teams[0].total)} back of lead` : `${Math.abs(t.total - teams[0].total)} back · in the hunt`}
+        </div>
+      </article>
+    `;
+  }).join('');
+
+  // ── Leaderboard rows ──────────────────────────────────────────────────
+  const lbEl = document.getElementById('leaderboard');
+  function renderLB(filter = '') {
+    const f = filter.toLowerCase().trim();
+    const rows = teams.slice(3).filter(t => {
+      if (!f) return true;
+      return t.players.some(p => p.toLowerCase().includes(f))
+        || t.golfers.some(g => g.name.toLowerCase().includes(f));
+    });
+    lbEl.innerHTML = rows.map(t => `
+      <div class="row glass grid grid-cols-12 gap-3 px-4 py-3 items-center border-l-2" style="border-left-color: transparent;">
+        <div class="col-span-1 font-display text-2xl font-semibold tabular flex items-center gap-2">
+          ${t.isLive ? '<span class="live-dot"></span>' : '<span class="w-2"></span>'}
+          <span>${t.rank}</span>
+        </div>
+        <div class="col-span-3 min-w-0">
+          <div class="font-medium text-base leading-tight truncate">${t.players.join(' &amp; ')}</div>
+          <div class="text-[11px] text-muted truncate">${t.golfers.filter((_,k)=>k!==t.dropIdx).map(g=>g.name).join(' · ')}</div>
+        </div>
+        <div class="col-span-6 flex items-center gap-3 flex-wrap">
+          ${t.golfers.map((g, k) => `
+            <div class="flex items-center gap-1.5 ${k === t.dropIdx ? 'dropped' : ''}">
+              <span class="tier-pill tier-${g.tier}">${g.tier}</span>
+              <span class="tabular text-sm font-medium ${scoreClass(g.score)} ${k === t.dropIdx ? 'line-through' : ''}">${fmt(g.score)}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div class="col-span-1 text-right text-sm text-muted tabular">${t.thru === 18 ? 'F' : t.thru}</div>
+        <div class="col-span-1 text-right font-display text-2xl font-semibold tabular ${scoreClass(t.total)}">${fmt(t.total)}</div>
+      </div>
+    `).join('') || '<div class="text-center py-12 text-muted">No entries match.</div>';
+  }
+  renderLB();
+  document.getElementById('search').addEventListener('input', e => renderLB(e.target.value));
+</script>
+</body>
+</html>
