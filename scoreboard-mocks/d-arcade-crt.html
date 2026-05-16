@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Major Pool · Scoreboard · D — CRT High-Score</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg:        #07020f;
+    --bg-deep:   #04010a;
+    --panel:     #0e0420;
+    --hairline:  #1f0a3f;
+    --neon-cy:   #22e3ff;
+    --neon-mg:   #ff2bd6;
+    --neon-yl:   #fff15a;
+    --neon-gn:   #5cff8e;
+    --neon-rd:   #ff3b6b;
+    --ink:       #e9e2ff;
+    --ink-dim:   #8a7bb8;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'VT323', ui-monospace, monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Scanlines + CRT vignette */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    pointer-events: none; z-index: 50;
+    background:
+      repeating-linear-gradient(
+        to bottom,
+        rgba(0,0,0,0) 0px,
+        rgba(0,0,0,0) 2px,
+        rgba(0,0,0,0.22) 3px
+      );
+    mix-blend-mode: multiply;
+  }
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    pointer-events: none; z-index: 49;
+    background:
+      radial-gradient(ellipse at center,
+        transparent 55%,
+        rgba(0,0,0,0.55) 100%);
+  }
+
+  /* Subtle CRT flicker */
+  @keyframes flicker {
+    0%,100% { opacity: 1; }
+    97%     { opacity: 0.96; }
+    98%     { opacity: 1; }
+    99%     { opacity: 0.94; }
+  }
+  main { animation: flicker 6s infinite steps(1); }
+
+  /* Display + heading fonts */
+  .pix { font-family: 'Press Start 2P', monospace; letter-spacing: 0.04em; }
+  .mono { font-family: 'Share Tech Mono', monospace; }
+  .num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+
+  /* Layout */
+  main {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 22px 16px 64px;
+  }
+
+  /* Top strip — CONCEPT nav */
+  .nav {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 18px;
+    font-size: 11px;
+  }
+  .nav-tag {
+    color: var(--ink-dim);
+    text-transform: uppercase; letter-spacing: 0.18em;
+    margin-right: 8px;
+  }
+  .nav a {
+    color: var(--ink-dim); text-decoration: none;
+    padding: 4px 8px;
+    border: 1px solid var(--hairline);
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+  }
+  .nav a:hover { color: var(--neon-cy); border-color: var(--neon-cy); }
+  .nav a.active {
+    color: var(--neon-yl);
+    border-color: var(--neon-yl);
+    background: rgba(255,241,90,0.08);
+    text-shadow: 0 0 8px var(--neon-yl);
+  }
+
+  /* Marquee header — like an arcade attract screen */
+  .marquee {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 20px;
+    align-items: end;
+    padding: 18px 18px 16px;
+    border: 1px solid var(--neon-mg);
+    background: linear-gradient(180deg, rgba(255,43,214,0.06) 0%, rgba(34,227,255,0.04) 100%);
+    box-shadow:
+      0 0 0 1px rgba(255,43,214,0.15) inset,
+      0 0 32px rgba(255,43,214,0.18),
+      0 0 64px rgba(34,227,255,0.08);
+    border-radius: 4px;
+    position: relative;
+  }
+  .marquee::before {
+    content: '★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★';
+    position: absolute; top: 4px; left: 18px; right: 18px;
+    font-family: 'VT323', monospace; font-size: 12px;
+    color: var(--neon-mg); opacity: 0.6;
+    letter-spacing: 0.4em; overflow: hidden;
+    text-shadow: 0 0 6px var(--neon-mg);
+  }
+  .mascot-cameo {
+    width: 88px; height: 88px;
+    display: block;
+    filter: drop-shadow(0 0 12px rgba(34,227,255,0.45));
+    image-rendering: auto;
+  }
+  .mascot-cameo svg { width: 100%; height: 100%; display: block; }
+  .mascot-label {
+    margin-top: 4px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: var(--neon-yl);
+    text-shadow: 0 0 6px var(--neon-yl);
+    text-align: center;
+    animation: blink 1.1s infinite steps(2);
+  }
+  @keyframes blink { 50% { opacity: 0.15; } }
+
+  .title-block { text-align: center; }
+  .super {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: var(--neon-cy);
+    text-shadow: 0 0 8px rgba(34,227,255,0.7);
+    letter-spacing: 0.22em;
+  }
+  .title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 24px;
+    line-height: 1.15;
+    color: var(--neon-yl);
+    margin: 10px 0 6px;
+    text-shadow:
+      0 0 4px var(--neon-yl),
+      0 0 18px rgba(255,241,90,0.6),
+      2px 0 0 var(--neon-mg),
+      -2px 0 0 var(--neon-cy);
+  }
+  .sub {
+    font-size: 18px; color: var(--ink-dim);
+    letter-spacing: 0.06em;
+  }
+
+  .live-coin {
+    display: inline-flex; flex-direction: column; align-items: flex-end; gap: 4px;
+  }
+  .live-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 9px;
+    border: 1px solid var(--neon-gn);
+    color: var(--neon-gn);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    text-shadow: 0 0 6px var(--neon-gn);
+    cursor: pointer;
+    background: rgba(92,255,142,0.06);
+    transition: background 160ms ease;
+  }
+  .live-pill:hover { background: rgba(92,255,142,0.14); }
+  .live-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--neon-gn);
+    box-shadow: 0 0 8px var(--neon-gn);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 50% { opacity: 0.35; } }
+  .updated {
+    color: var(--ink-dim); font-size: 14px;
+    letter-spacing: 0.1em;
+  }
+
+  /* KPI band */
+  .kpis {
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  .kpi {
+    border: 1px solid var(--hairline);
+    background: var(--panel);
+    padding: 10px 12px;
+    border-radius: 3px;
+    position: relative;
+  }
+  .kpi::after {
+    content: ''; position: absolute; inset: 0;
+    border: 1px solid transparent;
+    border-radius: 3px; pointer-events: none;
+  }
+  .kpi-label {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px; color: var(--ink-dim);
+    letter-spacing: 0.16em;
+  }
+  .kpi-value {
+    margin-top: 6px;
+    font-size: 30px; line-height: 1;
+    color: var(--neon-cy);
+    text-shadow: 0 0 8px rgba(34,227,255,0.55);
+  }
+  .kpi.warn .kpi-value { color: var(--neon-rd); text-shadow: 0 0 8px rgba(255,59,107,0.55); }
+  .kpi.gold .kpi-value { color: var(--neon-yl); text-shadow: 0 0 8px rgba(255,241,90,0.55); }
+  .kpi.gn   .kpi-value { color: var(--neon-gn); text-shadow: 0 0 8px rgba(92,255,142,0.55); }
+  @media (max-width: 640px) {
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* High-score header */
+  .hs-header {
+    margin: 28px 0 8px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .hs-header .bar {
+    flex: 1; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--neon-mg), transparent);
+    opacity: 0.7;
+  }
+  .hs-header .lbl {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    color: var(--neon-mg);
+    text-shadow: 0 0 8px var(--neon-mg);
+    letter-spacing: 0.22em;
+  }
+
+  /* Column header row (mimics CRT high-score table) */
+  .hs-cols {
+    display: grid;
+    grid-template-columns: 56px 64px 1fr 92px 92px;
+    gap: 12px;
+    padding: 8px 12px;
+    border-top: 1px solid var(--hairline);
+    border-bottom: 1px solid var(--hairline);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: var(--ink-dim);
+    letter-spacing: 0.14em;
+  }
+  .hs-cols .right { text-align: right; }
+  @media (max-width: 720px) {
+    .hs-cols { grid-template-columns: 42px 1fr 80px 80px; }
+    .hs-cols .col-rank { display: none; }
+  }
+  @media (max-width: 480px) {
+    .hs-cols { grid-template-columns: 42px 1fr 78px; }
+    .hs-cols .col-live { display: none; }
+  }
+
+  /* Rows */
+  .row {
+    display: grid;
+    grid-template-columns: 56px 64px 1fr 92px 92px;
+    gap: 12px;
+    padding: 12px;
+    border-bottom: 1px dashed var(--hairline);
+    align-items: center;
+    cursor: pointer;
+    transition: background 160ms ease;
+  }
+  .row:hover { background: rgba(34,227,255,0.04); }
+  .row .right { text-align: right; }
+
+  .row.is-live { border-left: 2px solid var(--neon-gn); padding-left: 10px; }
+  .row.is-live:hover { background: rgba(92,255,142,0.06); }
+
+  .rank {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 13px;
+    color: var(--neon-yl);
+    text-shadow: 0 0 6px rgba(255,241,90,0.5);
+  }
+  .row.top1 .rank { color: var(--neon-yl); }
+  .row.top2 .rank { color: var(--neon-cy); text-shadow: 0 0 6px rgba(34,227,255,0.5); }
+  .row.top3 .rank { color: var(--neon-mg); text-shadow: 0 0 6px rgba(255,43,214,0.5); }
+
+  .initials {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    color: var(--ink);
+    letter-spacing: 0.16em;
+  }
+  .who {
+    min-width: 0;
+  }
+  .who-name {
+    font-size: 22px; line-height: 1.05;
+    color: var(--ink);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .who-meta {
+    font-size: 14px;
+    color: var(--ink-dim);
+    letter-spacing: 0.06em;
+    margin-top: 2px;
+  }
+
+  .score {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 18px;
+    color: var(--neon-cy);
+    text-shadow: 0 0 8px rgba(34,227,255,0.6);
+  }
+  .score.over { color: var(--neon-rd); text-shadow: 0 0 8px rgba(255,59,107,0.55); }
+  .score.even { color: var(--ink); text-shadow: none; }
+
+  .live-cell {
+    font-size: 16px;
+    color: var(--ink-dim);
+    letter-spacing: 0.06em;
+  }
+  .live-cell .on {
+    color: var(--neon-gn);
+    text-shadow: 0 0 6px rgba(92,255,142,0.5);
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+  }
+
+  /* Hide certain columns on small screens (must match header) */
+  @media (max-width: 720px) {
+    .row { grid-template-columns: 42px 1fr 80px 80px; }
+    .row .col-rank { display: none; }
+    .initials { font-size: 13px; }
+  }
+  @media (max-width: 480px) {
+    .row { grid-template-columns: 42px 1fr 78px; }
+    .row .col-live { display: none; }
+    .who-name { font-size: 18px; }
+    .score { font-size: 16px; }
+  }
+
+  /* Expanded panel — round-by-round breakdown */
+  .panel {
+    grid-column: 1 / -1;
+    display: none;
+    margin-top: 10px;
+    padding: 12px;
+    background: var(--bg-deep);
+    border: 1px solid var(--hairline);
+    border-radius: 3px;
+  }
+  .row.open + .panel { display: block; }
+
+  .panel-grid {
+    display: grid;
+    grid-template-columns: 1fr 50px 50px 50px 50px 70px;
+    gap: 8px;
+    font-size: 15px;
+  }
+  .panel-grid .h {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: var(--ink-dim);
+    letter-spacing: 0.14em;
+    border-bottom: 1px solid var(--hairline);
+    padding-bottom: 6px;
+    margin-bottom: 4px;
+  }
+  .panel-grid .cell { padding: 4px 0; color: var(--ink); }
+  .panel-grid .cell.r-neg { color: var(--neon-cy); }
+  .panel-grid .cell.r-pos { color: var(--neon-rd); }
+  .panel-grid .cell.r-dim { color: var(--ink-dim); }
+  .panel-grid .pname {
+    text-transform: uppercase; letter-spacing: 0.05em;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .panel-grid .pname .tag {
+    display: inline-block;
+    margin-left: 6px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    padding: 2px 4px;
+    border: 1px solid currentColor;
+  }
+  .tag.tag-mc  { color: var(--neon-rd); }
+  .tag.tag-wd  { color: var(--neon-mg); }
+  .tag.tag-drop{ color: var(--ink-dim); }
+  .tag.tag-live{ color: var(--neon-gn); }
+
+  .panel-grid .right { text-align: right; }
+  .panel-grid .total {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    color: var(--neon-yl);
+    text-align: right;
+    border-top: 1px solid var(--hairline);
+    padding-top: 8px;
+    margin-top: 4px;
+  }
+  .panel-grid .dropped { opacity: 0.45; text-decoration: line-through; }
+
+  @media (max-width: 560px) {
+    .panel-grid {
+      grid-template-columns: 1fr 38px 38px 38px 38px 54px;
+      font-size: 13px;
+      gap: 6px;
+    }
+  }
+
+  /* Footer */
+  .footer {
+    margin-top: 32px;
+    text-align: center;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: var(--ink-dim);
+    letter-spacing: 0.2em;
+  }
+  .footer .blink { color: var(--neon-yl); animation: blink 1.2s steps(2) infinite; }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    main, .live-dot, .mascot-label, .footer .blink { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<main>
+
+  <nav class="nav" aria-label="Concept directions">
+    <span class="nav-tag">Concept</span>
+    <a href="d-arcade-crt.html" class="active">D · CRT</a>
+    <a href="e-arcade-synthwave.html">E · Synthwave</a>
+    <a href="f-arcade-cabinet.html">F · Cabinet</a>
+  </nav>
+
+  <header class="marquee">
+    <div>
+      <a class="mascot-cameo" href="#" aria-label="Mascot">
+        <!-- Mascot SVG, scaled down — moss bg trimmed via viewBox -->
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="20 12 260 275" aria-hidden="true">
+          <defs>
+            <radialGradient id="ball-d" cx="38%" cy="32%" r="65%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="60%" stop-color="#f3f3ed"/>
+              <stop offset="100%" stop-color="#d0d0c6"/>
+            </radialGradient>
+            <radialGradient id="iris-d" cx="30%" cy="30%" r="70%">
+              <stop offset="0%" stop-color="#4a4a4a"/>
+              <stop offset="100%" stop-color="#111111"/>
+            </radialGradient>
+            <radialGradient id="beer-d" cx="25%" cy="20%" r="80%">
+              <stop offset="0%" stop-color="#f8d870"/>
+              <stop offset="100%" stop-color="#c08820"/>
+            </radialGradient>
+            <clipPath id="clip-d"><circle cx="150" cy="160" r="88"/></clipPath>
+          </defs>
+          <g transform="translate(20, 12)">
+            <ellipse cx="130" cy="248" rx="70" ry="10" fill="#000" opacity="0.15"/>
+            <rect x="6" y="162" width="58" height="19" rx="9.5" fill="#e4e4db" stroke="#b5b5a5" stroke-width="1.5" transform="rotate(14, 35, 171)"/>
+            <g transform="translate(1, 168)">
+              <ellipse cx="4"  cy="10" rx="5"   ry="6.5" fill="white" stroke="#ddd" stroke-width="1"/>
+              <ellipse cx="12" cy="6"  rx="6"   ry="7.5" fill="white" stroke="#ddd" stroke-width="1"/>
+              <ellipse cx="21" cy="7"  rx="6"   ry="7"   fill="white" stroke="#ddd" stroke-width="1"/>
+              <ellipse cx="30" cy="10" rx="4.5" ry="6"   fill="white" stroke="#ddd" stroke-width="1"/>
+              <rect x="0" y="10" width="34" height="44" rx="4" fill="url(#beer-d)" stroke="#9a6c12" stroke-width="1.5"/>
+              <rect x="5" y="15" width="7" height="32" rx="3.5" fill="white" opacity="0.18"/>
+              <path d="M34,20 Q50,20 50,32 Q50,46 34,46" fill="none" stroke="#9a6c12" stroke-width="4.5" stroke-linecap="round"/>
+            </g>
+            <rect x="196" y="162" width="52" height="19" rx="9.5" fill="#e4e4db" stroke="#b5b5a5" stroke-width="1.5" transform="rotate(-14, 222, 171)"/>
+            <circle cx="130" cy="148" r="88" fill="url(#ball-d)" stroke="#c2c2ba" stroke-width="1.5"/>
+            <g fill="none" stroke-linecap="round" opacity="0.55">
+              <path d="M197,143 Q192,129 196,114 Q200,99 195,85" stroke="#aaa" stroke-width="2.5"/>
+              <path d="M200,141 Q196,127 199,112 Q202,97 198,83" stroke="#bbb" stroke-width="1.8"/>
+              <path d="M194,140 Q189,126 192,112" stroke="#ccc" stroke-width="1.3"/>
+            </g>
+            <ellipse cx="105" cy="126" rx="13" ry="15" fill="white" stroke="#888" stroke-width="1.5"/>
+            <ellipse cx="105" cy="128" rx="8.5" ry="10" fill="url(#iris-d)"/>
+            <circle cx="101" cy="124" r="2.8" fill="white" opacity="0.85"/>
+            <path d="M92,119 Q105,113 118,119" fill="#ebebE2" stroke="#bbbba8" stroke-width="1.2" stroke-linecap="round"/>
+            <ellipse cx="155" cy="126" rx="13" ry="15" fill="white" stroke="#888" stroke-width="1.5"/>
+            <ellipse cx="155" cy="128" rx="8.5" ry="10" fill="url(#iris-d)"/>
+            <circle cx="151" cy="124" r="2.8" fill="white" opacity="0.85"/>
+            <path d="M142,119 Q155,113 168,119" fill="#ebebE2" stroke="#bbbba8" stroke-width="1.2" stroke-linecap="round"/>
+            <path d="M96,160 Q116,176 150,167 Q162,162 166,153" fill="none" stroke="#666" stroke-width="2.8" stroke-linecap="round"/>
+            <g transform="translate(162, 153) rotate(-10)">
+              <rect x="0" y="-3.5" width="10" height="7" rx="2.5" fill="#c07848" stroke="#a05830" stroke-width="0.8"/>
+              <rect x="9" y="-3.5" width="28" height="7" rx="1.5" fill="#f6f1e8" stroke="#ddd" stroke-width="0.8"/>
+              <circle cx="38" cy="0" r="5" fill="#ff4800" opacity="0.85"/>
+              <circle cx="38" cy="0" r="3" fill="#ff9018"/>
+              <circle cx="37" cy="-1" r="1.4" fill="#ffe070" opacity="0.9"/>
+            </g>
+          </g>
+        </svg>
+      </a>
+      <div class="mascot-label">1UP</div>
+    </div>
+
+    <div class="title-block">
+      <div class="super">★ THE MAJOR POOL ★</div>
+      <h1 class="title">PGA CHAMPIONSHIP</h1>
+      <div class="sub">ROUND 4 · BEST 4 OF 5</div>
+    </div>
+
+    <div class="live-coin">
+      <button class="live-pill" id="updateBtn" type="button">
+        <span class="live-dot"></span>
+        <span>GAME ACTIVE</span>
+      </button>
+      <span class="updated" id="updatedLabel">JUST NOW</span>
+    </div>
+  </header>
+
+  <section class="kpis" aria-label="Tournament stats">
+    <div class="kpi">
+      <div class="kpi-label">ROUND</div>
+      <div class="kpi-value num">4 / 4</div>
+    </div>
+    <div class="kpi warn">
+      <div class="kpi-label">CUT PENALTY</div>
+      <div class="kpi-value num" id="stat-cut">—</div>
+    </div>
+    <div class="kpi gold">
+      <div class="kpi-label">ENTRIES</div>
+      <div class="kpi-value num" id="stat-entries">—</div>
+    </div>
+    <div class="kpi gn">
+      <div class="kpi-label">LIVE HOLES</div>
+      <div class="kpi-value num" id="stat-live">—</div>
+    </div>
+  </section>
+
+  <div class="hs-header">
+    <span class="lbl">HIGH SCORES</span>
+    <span class="bar"></span>
+    <span class="lbl" style="color:var(--neon-cy); text-shadow:0 0 8px var(--neon-cy);">★</span>
+    <span class="bar"></span>
+  </div>
+
+  <div class="hs-cols" role="row">
+    <span class="col-rank">RANK</span>
+    <span>INITS</span>
+    <span>PLAYER</span>
+    <span class="right col-live">STATUS</span>
+    <span class="right">SCORE</span>
+  </div>
+
+  <div id="board" role="table" aria-label="Pool standings"></div>
+
+  <div class="footer">
+    <span class="blink">▶ TAP A ROW TO SEE PICK BREAKDOWN ◀</span>
+  </div>
+
+</main>
+
+<script src="data.js"></script>
+<script>
+  const { GOLFERS, PAR, standings, cutPenalty, fmtToPar, pickLabel } = window.MOCK;
+
+  // Build initials like ABC from "Alex Becker Chen"
+  function initials(name) {
+    return name
+      .split(/\s+/)
+      .map(w => w[0])
+      .join('')
+      .slice(0, 3)
+      .toUpperCase();
+  }
+
+  function scoreClass(n) {
+    if (n === 0) return 'even';
+    return n < 0 ? '' : 'over';
+  }
+
+  function rowHtml(row, idx) {
+    const isLive = row.livePicks > 0;
+    const topCls = idx === 0 ? 'top1' : idx === 1 ? 'top2' : idx === 2 ? 'top3' : '';
+
+    const liveCell = isLive
+      ? `<span class="on"><span class="live-dot" style="width:6px;height:6px"></span>R4 LIVE</span>`
+      : `<span>THRU R${row.roundsScored}</span>`;
+
+    return `
+      <div class="row ${topCls} ${isLive ? 'is-live' : ''}" data-id="${row.entry.id}"
+           role="row" tabindex="0" aria-expanded="false" aria-controls="p-${row.entry.id}">
+        <span class="rank col-rank">${row.posDisplay}</span>
+        <span class="initials">${initials(row.entry.name)}</span>
+        <span class="who">
+          <div class="who-name">${row.entry.name}</div>
+          <div class="who-meta">${row.picks.length} PICKS · TB ${fmtToPar(row.entry.tiebreaker)}</div>
+        </span>
+        <span class="right live-cell col-live">${liveCell}</span>
+        <span class="right score ${scoreClass(row.toPar)}">${fmtToPar(row.toPar)}</span>
+      </div>
+      <div class="panel" id="p-${row.entry.id}" role="region" aria-hidden="true">
+        ${panelHtml(row)}
+      </div>
+    `;
+  }
+
+  function panelHtml(row) {
+    const picks = [...row.picks].sort((a, b) => a.sum - b.sum);
+    const droppedRank = row.droppedRank;
+    const cellHtml = (n, played, status) => {
+      if (status === 'mc' || status === 'wd') return `<span class="cell r-dim">—</span>`;
+      if (n === null || n === undefined) return `<span class="cell r-dim">—</span>`;
+      const cls = n < 0 ? 'r-neg' : n > 0 ? 'r-pos' : '';
+      return `<span class="cell ${cls}">${fmtToPar(n)}</span>`;
+    };
+
+    const rows = picks.map(p => {
+      const lbl = pickLabel(p);
+      const tag = lbl
+        ? `<span class="tag tag-${lbl.toLowerCase()}">${lbl}</span>`
+        : p.live
+          ? `<span class="tag tag-live">LIVE</span>`
+          : (p.rank === droppedRank ? `<span class="tag tag-drop">DROP</span>` : '');
+      const dropCls = p.rank === droppedRank ? 'dropped' : '';
+      const lastName = p.name.split(' ').slice(-1)[0].toUpperCase();
+      const sumCls = p.sum < 0 ? 'r-neg' : p.sum > 0 ? 'r-pos' : '';
+      return `
+        <span class="cell pname ${dropCls}">${lastName}${tag}</span>
+        ${cellHtml(p.rounds[0], 1, p.status)}
+        ${cellHtml(p.rounds[1], 2, p.status)}
+        ${cellHtml(p.rounds[2], 3, p.status)}
+        ${cellHtml(p.rounds[3], 4, p.status)}
+        <span class="cell right ${sumCls} ${dropCls}">${fmtToPar(p.sum)}</span>
+      `;
+    }).join('');
+
+    return `
+      <div class="panel-grid">
+        <span class="h">PLAYER</span>
+        <span class="h">R1</span>
+        <span class="h">R2</span>
+        <span class="h">R3</span>
+        <span class="h">R4</span>
+        <span class="h" style="text-align:right">SUM</span>
+        ${rows}
+        <span class="total" style="grid-column: 1 / 6">BEST 4 OF 5 · TEAM TOTAL</span>
+        <span class="total">${fmtToPar(row.toPar)}</span>
+      </div>
+    `;
+  }
+
+  function render() {
+    const rows = standings();
+    document.getElementById('stat-cut').textContent = fmtToPar(cutPenalty());
+    document.getElementById('stat-entries').textContent = rows.length;
+    document.getElementById('stat-live').textContent =
+      rows.reduce((a, r) => a + r.liveHolesLeft, 0);
+    document.getElementById('board').innerHTML =
+      rows.map(rowHtml).join('');
+    bindRows();
+  }
+
+  // Expand-row interaction (one at a time)
+  let openId = null;
+  function bindRows() {
+    document.querySelectorAll('.row').forEach(r => {
+      r.addEventListener('click', () => toggleRow(r));
+      r.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleRow(r); }
+        else if (e.key === 'Escape' && openId) {
+          const open = document.querySelector('.row.open');
+          if (open) { open.classList.remove('open'); open.setAttribute('aria-expanded', 'false'); openId = null; }
+        }
+      });
+    });
+    if (openId) {
+      const r = document.querySelector(`.row[data-id="${openId}"]`);
+      if (r) { r.classList.add('open'); r.setAttribute('aria-expanded', 'true'); }
+      else openId = null;
+    }
+  }
+  function toggleRow(r) {
+    const id = r.dataset.id;
+    document.querySelectorAll('.row.open').forEach(other => {
+      if (other !== r) { other.classList.remove('open'); other.setAttribute('aria-expanded', 'false'); }
+    });
+    const willOpen = !r.classList.contains('open');
+    r.classList.toggle('open', willOpen);
+    r.setAttribute('aria-expanded', String(willOpen));
+    openId = willOpen ? id : null;
+  }
+
+  // Timestamp + simulated update
+  let fetchedAt = Date.now();
+  function refreshTimestamp() {
+    const mins = Math.floor((Date.now() - fetchedAt) / 60000);
+    document.getElementById('updatedLabel').textContent =
+      (mins < 1 ? 'JUST NOW' : mins + ' MIN AGO');
+  }
+  setInterval(refreshTimestamp, 20000);
+
+  document.getElementById('updateBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    Object.values(GOLFERS).forEach(g => {
+      if (g.live && g.live.thru < 18) g.live.thru = Math.min(18, g.live.thru + 2);
+    });
+    fetchedAt = Date.now();
+    refreshTimestamp();
+    render();
+  });
+
+  render();
+</script>
+</body>
+</html>

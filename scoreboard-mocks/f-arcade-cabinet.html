@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Major Pool · Scoreboard · F — Arcade Cabinet</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --room-bg:      #0d0507;
+    --wood-dark:    #1c0d04;
+    --wood:         #2c1709;
+    --wood-light:   #3e2310;
+    --wood-edge:    #5a3517;
+    --chrome:       #c8c2b6;
+    --chrome-dark:  #2f2a23;
+    --marquee:      #0a0210;
+    --phosphor-bg:  #160a02;
+    --phosphor-dim: #4d2c0a;
+    --phosphor:     #ffae3a;
+    --phosphor-hi:  #ffd07a;
+    --phosphor-lo:  #b96e10;
+    --warn:         #ff5240;
+    --cool:         #66ffe6;
+    --gn:           #74ff6b;
+    --bad:          #ff3754;
+    --neon-mg:      #ff2bd6;
+    --neon-cy:      #22e3ff;
+    --neon-yl:      #ffd84b;
+    --ink-dim:      #8a7355;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    color: var(--phosphor);
+    font-family: 'VT323', ui-monospace, monospace;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 30%, #1a0814 0%, #050203 70%),
+      var(--room-bg);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* Floor reflection vibe */
+  body::before {
+    content: '';
+    position: fixed; left: 0; right: 0; bottom: 0; height: 30vh;
+    background: linear-gradient(to top, rgba(255,43,214,0.10) 0%, transparent 100%);
+    pointer-events: none; z-index: 0;
+  }
+
+  .num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+  .pix { font-family: 'Press Start 2P', monospace; letter-spacing: 0.04em; }
+
+  /* Top concept nav (above the cabinet) */
+  .nav {
+    max-width: 760px; margin: 0 auto;
+    display: flex; align-items: center; gap: 6px;
+    padding: 18px 16px 14px;
+    font-size: 12px;
+    position: relative; z-index: 1;
+  }
+  .nav-tag {
+    color: var(--ink-dim); text-transform: uppercase; letter-spacing: 0.2em;
+    margin-right: 8px; opacity: 0.7;
+  }
+  .nav a {
+    color: var(--ink-dim); text-decoration: none;
+    padding: 4px 9px;
+    border: 1px solid var(--chrome-dark);
+    border-radius: 2px;
+    text-transform: uppercase; letter-spacing: 0.1em; font-size: 11px;
+    transition: color 160ms ease, border-color 160ms ease;
+  }
+  .nav a:hover { color: var(--phosphor); border-color: var(--phosphor-lo); }
+  .nav a.active {
+    color: var(--neon-mg); border-color: var(--neon-mg);
+    background: rgba(255,43,214,0.08);
+    text-shadow: 0 0 8px var(--neon-mg);
+  }
+
+  /* The cabinet */
+  .cabinet {
+    max-width: 760px;
+    margin: 0 auto 60px;
+    background:
+      linear-gradient(180deg, var(--wood-light) 0%, var(--wood) 8%, var(--wood) 92%, var(--wood-dark) 100%);
+    border-radius: 28px 28px 12px 12px;
+    padding: 18px 18px 24px;
+    box-shadow:
+      0 0 0 2px var(--wood-edge),
+      0 0 0 3px var(--chrome-dark),
+      0 30px 70px rgba(0,0,0,0.5),
+      inset 0 0 0 1px rgba(255,255,255,0.04);
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Marquee panel (top) */
+  .marquee {
+    background:
+      radial-gradient(ellipse at 50% 35%, rgba(255,43,214,0.18) 0%, transparent 60%),
+      linear-gradient(180deg, #1a0420 0%, var(--marquee) 100%);
+    border: 1px solid var(--chrome-dark);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: 92px 1fr 92px;
+    align-items: center;
+    gap: 14px;
+    position: relative;
+    box-shadow:
+      inset 0 0 30px rgba(255,43,214,0.12),
+      0 4px 16px rgba(0,0,0,0.45);
+  }
+  /* faux backlight bulbs across the top */
+  .marquee::before {
+    content: '';
+    position: absolute; top: -6px; left: 14px; right: 14px; height: 4px;
+    background:
+      radial-gradient(circle, var(--neon-yl) 1.5px, transparent 2px) 0 0 / 20px 4px repeat-x;
+    opacity: 0.7;
+    filter: drop-shadow(0 0 4px var(--neon-yl));
+  }
+
+  .mascot-mark {
+    width: 92px; height: 92px;
+    filter: drop-shadow(0 0 12px rgba(255,174,58,0.5));
+  }
+  .mascot-mark svg { width: 100%; height: 100%; display: block; }
+
+  .marquee-title {
+    text-align: center;
+  }
+  .mt-super {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    letter-spacing: 0.32em;
+    color: var(--neon-cy);
+    text-shadow: 0 0 8px var(--neon-cy);
+  }
+  .mt-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 22px;
+    line-height: 1.1;
+    margin: 8px 0 4px;
+    color: var(--neon-yl);
+    text-shadow:
+      0 0 6px var(--neon-yl),
+      0 0 18px rgba(255,216,75,0.55),
+      2px 0 0 var(--neon-mg),
+      -2px 0 0 var(--neon-cy);
+    letter-spacing: 0.04em;
+  }
+  .mt-sub {
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    color: #fff;
+    letter-spacing: 0.18em;
+    opacity: 0.78;
+  }
+
+  .coin-slot {
+    text-align: center;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: var(--neon-mg);
+    text-shadow: 0 0 6px var(--neon-mg);
+    line-height: 1.6;
+    animation: blink 1.2s infinite steps(2);
+  }
+  @keyframes blink { 50% { opacity: 0.2; } }
+  .coin-slot .slot-rect {
+    display: inline-block;
+    width: 38px; height: 6px;
+    background: #000;
+    border: 1px solid var(--chrome);
+    margin: 4px 0;
+    border-radius: 1px;
+  }
+
+  /* Chrome bezel + screen */
+  .screen-bezel {
+    margin-top: 18px;
+    background: linear-gradient(180deg, #2a241c 0%, #1a1610 100%);
+    border: 1px solid var(--chrome-dark);
+    border-radius: 10px;
+    padding: 12px;
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,0.04),
+      0 6px 18px rgba(0,0,0,0.4);
+  }
+  .screen-inner {
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(255,174,58,0.10) 0%, transparent 65%),
+      linear-gradient(180deg, #1d0d04 0%, var(--phosphor-bg) 50%, #100502 100%);
+    border-radius: 6px;
+    padding: 18px 18px 22px;
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+      inset 0 0 0 1px rgba(255,174,58,0.18),
+      inset 0 0 80px rgba(0,0,0,0.65);
+  }
+  /* Scanlines confined to the screen */
+  .screen-inner::before {
+    content: '';
+    position: absolute; inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(0,0,0,0) 0px,
+      rgba(0,0,0,0) 2px,
+      rgba(0,0,0,0.22) 3px
+    );
+    mix-blend-mode: multiply;
+  }
+  /* CRT vignette */
+  .screen-inner::after {
+    content: '';
+    position: absolute; inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.45) 100%);
+  }
+  .screen-content { position: relative; z-index: 1; }
+
+  /* In-game HUD bar (status row at top of screen) */
+  .hud {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed var(--phosphor-lo);
+  }
+  .hud-left, .hud-right {
+    font-family: 'VT323', monospace;
+    font-size: 18px;
+    color: var(--phosphor);
+    letter-spacing: 0.1em;
+    text-shadow: 0 0 6px rgba(255,174,58,0.5);
+  }
+  .hud-right { text-align: right; }
+  .hud-mid {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: var(--neon-yl);
+    text-shadow: 0 0 8px var(--neon-yl);
+    letter-spacing: 0.22em;
+  }
+
+  /* KPI row inside screen */
+  .kpis {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  .kpi {
+    background: rgba(255,174,58,0.05);
+    border: 1px dashed var(--phosphor-lo);
+    padding: 8px 10px;
+    border-radius: 2px;
+  }
+  .kpi-label {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    letter-spacing: 0.18em;
+    color: var(--phosphor-lo);
+  }
+  .kpi-value {
+    margin-top: 4px;
+    font-family: 'VT323', monospace;
+    font-size: 26px; line-height: 1;
+    color: var(--phosphor-hi);
+    text-shadow: 0 0 8px rgba(255,174,58,0.55);
+  }
+  .kpi.warn .kpi-value { color: var(--warn); text-shadow: 0 0 8px rgba(255,82,64,0.5); }
+  .kpi.cool .kpi-value { color: var(--cool); text-shadow: 0 0 8px rgba(102,255,230,0.5); }
+  .kpi.gn   .kpi-value { color: var(--gn);   text-shadow: 0 0 8px rgba(116,255,107,0.5); }
+  @media (max-width: 640px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+
+  /* Standings header inside screen */
+  .stand-hdr {
+    margin: 18px 0 6px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .stand-hdr .lbl {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: var(--phosphor);
+    text-shadow: 0 0 6px rgba(255,174,58,0.5);
+    letter-spacing: 0.2em;
+  }
+  .stand-hdr .bar {
+    flex: 1; height: 1px; background: var(--phosphor-lo); opacity: 0.45;
+  }
+
+  .cols {
+    display: grid;
+    grid-template-columns: 48px 1fr 80px 76px;
+    gap: 10px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--phosphor-lo);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: var(--phosphor-lo);
+    letter-spacing: 0.16em;
+  }
+  .cols .right { text-align: right; }
+  @media (max-width: 520px) {
+    .cols { grid-template-columns: 38px 1fr 70px; }
+    .cols .col-status { display: none; }
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 48px 1fr 80px 76px;
+    gap: 10px;
+    padding: 10px;
+    border-bottom: 1px dashed rgba(255,174,58,0.18);
+    align-items: center;
+    cursor: pointer;
+    transition: background 160ms ease;
+  }
+  .row:hover { background: rgba(255,174,58,0.05); }
+  .row .right { text-align: right; }
+  .row.is-live { border-left: 2px solid var(--gn); padding-left: 8px; }
+
+  .r-rank {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    color: var(--neon-yl);
+    text-shadow: 0 0 6px rgba(255,216,75,0.5);
+  }
+  .row.top2 .r-rank { color: var(--cool); text-shadow: 0 0 6px var(--cool); }
+  .row.top3 .r-rank { color: var(--neon-mg); text-shadow: 0 0 6px var(--neon-mg); }
+  .row.rest .r-rank { color: var(--phosphor); text-shadow: 0 0 6px rgba(255,174,58,0.45); }
+
+  .r-name {
+    font-family: 'VT323', monospace;
+    font-size: 22px;
+    color: var(--phosphor-hi);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    text-shadow: 0 0 5px rgba(255,174,58,0.35);
+  }
+  .r-meta {
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    color: var(--phosphor-lo);
+    letter-spacing: 0.05em;
+    margin-top: -2px;
+  }
+
+  .r-status {
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    color: var(--phosphor);
+    letter-spacing: 0.08em;
+  }
+  .r-status .on {
+    color: var(--gn);
+    text-shadow: 0 0 6px rgba(116,255,107,0.5);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    letter-spacing: 0.16em;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .r-status .on::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--gn);
+    box-shadow: 0 0 6px var(--gn); animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 50% { opacity: 0.35; } }
+
+  .r-score {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 15px;
+    color: var(--phosphor-hi);
+    text-shadow: 0 0 8px rgba(255,174,58,0.5);
+  }
+  .r-score.over { color: var(--bad); text-shadow: 0 0 8px rgba(255,55,84,0.5); }
+  .r-score.even { color: var(--phosphor); text-shadow: none; }
+
+  @media (max-width: 520px) {
+    .row { grid-template-columns: 38px 1fr 70px; }
+    .row .col-status { display: none; }
+    .r-name { font-size: 18px; }
+    .r-score { font-size: 13px; }
+  }
+
+  /* Expanded round panel */
+  .panel {
+    grid-column: 1 / -1;
+    display: none;
+    margin-top: 10px;
+    padding: 12px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--phosphor-lo);
+    border-radius: 2px;
+  }
+  .row.open + .panel { display: block; }
+  .pg {
+    display: grid;
+    grid-template-columns: 1fr 48px 48px 48px 48px 64px;
+    gap: 6px;
+    font-family: 'VT323', monospace;
+    font-size: 15px;
+    color: var(--phosphor);
+  }
+  .pg .h {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: var(--phosphor-lo);
+    letter-spacing: 0.16em;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--phosphor-lo);
+    margin-bottom: 4px;
+  }
+  .pg .right { text-align: right; }
+  .pg .cell { padding: 2px 0; }
+  .pg .pname {
+    text-transform: uppercase; letter-spacing: 0.05em;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    color: var(--phosphor-hi);
+  }
+  .pg .r-neg { color: var(--cool); }
+  .pg .r-pos { color: var(--bad); }
+  .pg .r-dim { color: var(--phosphor-lo); }
+  .pg .dropped { opacity: 0.4; text-decoration: line-through; }
+  .pg .total {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: var(--neon-yl);
+    text-shadow: 0 0 6px var(--neon-yl);
+    text-align: right;
+    border-top: 1px solid var(--phosphor-lo);
+    padding-top: 8px;
+    margin-top: 4px;
+  }
+  .tag {
+    display: inline-block; margin-left: 6px;
+    font-family: 'Press Start 2P', monospace; font-size: 7px;
+    padding: 2px 4px; border: 1px solid currentColor;
+    text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  .tag-mc { color: var(--bad); }
+  .tag-wd { color: var(--neon-mg); }
+  .tag-drop { color: var(--phosphor-lo); }
+  .tag-live { color: var(--gn); }
+
+  @media (max-width: 520px) {
+    .pg {
+      grid-template-columns: 1fr 36px 36px 36px 36px 52px;
+      font-size: 13px; gap: 5px;
+    }
+  }
+
+  /* Control panel below the screen */
+  .control {
+    margin-top: 18px;
+    background:
+      linear-gradient(180deg, #2a160a 0%, #1c0d04 100%);
+    border: 1px solid var(--chrome-dark);
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 16px;
+  }
+  /* Joystick */
+  .stick {
+    width: 50px; height: 50px;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .stick .base {
+    position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 44px; height: 12px;
+    background: radial-gradient(ellipse, #444 0%, #1a1a1a 80%);
+    border-radius: 50%;
+  }
+  .stick .shaft {
+    position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    width: 6px; height: 30px;
+    background: linear-gradient(180deg, #ccc 0%, #555 100%);
+    border-radius: 2px;
+  }
+  .stick .ball {
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #ff5b5b 0%, #b51212 80%);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.6);
+  }
+
+  /* Start button — also acts as refresh */
+  .btn-1p {
+    appearance: none;
+    border: 0;
+    background:
+      radial-gradient(circle at 30% 30%, #ffd87a 0%, #b96e10 70%, #6a3a06 100%);
+    color: #1a0a02;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    padding: 14px 18px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow:
+      inset 0 -3px 0 rgba(0,0,0,0.35),
+      inset 0 2px 0 rgba(255,255,255,0.3),
+      0 4px 0 #5a3206,
+      0 6px 14px rgba(0,0,0,0.4);
+    transition: transform 80ms ease, box-shadow 80ms ease;
+  }
+  .btn-1p:active {
+    transform: translateY(3px);
+    box-shadow:
+      inset 0 -1px 0 rgba(0,0,0,0.4),
+      inset 0 2px 0 rgba(255,255,255,0.2),
+      0 1px 0 #5a3206,
+      0 2px 6px rgba(0,0,0,0.4);
+  }
+
+  .panel-meta {
+    text-align: right;
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    color: var(--phosphor);
+    letter-spacing: 0.1em;
+    line-height: 1.3;
+  }
+  .panel-meta .updated {
+    color: var(--phosphor-lo);
+    font-size: 14px;
+    letter-spacing: 0.14em;
+    display: block;
+    margin-top: 2px;
+  }
+
+  @media (max-width: 520px) {
+    .control { grid-template-columns: 1fr auto; padding: 12px 14px; }
+    .stick { display: none; }
+  }
+
+  /* Cabinet base + speaker grilles */
+  .base {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 12px;
+    padding: 0 4px;
+  }
+  .grille {
+    height: 18px;
+    background-image:
+      repeating-linear-gradient(
+        90deg,
+        rgba(0,0,0,0.6) 0px,
+        rgba(0,0,0,0.6) 3px,
+        transparent 3px,
+        transparent 6px);
+    border: 1px solid var(--chrome-dark);
+    border-radius: 3px;
+    background-color: var(--wood-dark);
+    opacity: 0.85;
+  }
+  .badge {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: var(--phosphor-lo);
+    letter-spacing: 0.18em;
+    padding: 4px 8px;
+    border: 1px solid var(--chrome-dark);
+    border-radius: 2px;
+    background: var(--wood-dark);
+    white-space: nowrap;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .coin-slot, .r-status .on::before { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav" aria-label="Concept directions">
+  <span class="nav-tag">Concept</span>
+  <a href="d-arcade-crt.html">D · CRT</a>
+  <a href="e-arcade-synthwave.html">E · Synthwave</a>
+  <a href="f-arcade-cabinet.html" class="active">F · Cabinet</a>
+</nav>
+
+<section class="cabinet">
+
+  <header class="marquee">
+    <div class="mascot-mark" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="20 12 260 275">
+        <defs>
+          <radialGradient id="ball-f" cx="38%" cy="32%" r="65%">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="60%" stop-color="#f3f3ed"/>
+            <stop offset="100%" stop-color="#d0d0c6"/>
+          </radialGradient>
+          <radialGradient id="iris-f" cx="30%" cy="30%" r="70%">
+            <stop offset="0%" stop-color="#4a4a4a"/>
+            <stop offset="100%" stop-color="#111111"/>
+          </radialGradient>
+          <radialGradient id="beer-f" cx="25%" cy="20%" r="80%">
+            <stop offset="0%" stop-color="#f8d870"/>
+            <stop offset="100%" stop-color="#c08820"/>
+          </radialGradient>
+        </defs>
+        <g transform="translate(20, 12)">
+          <ellipse cx="130" cy="248" rx="70" ry="10" fill="#000" opacity="0.15"/>
+          <rect x="6" y="162" width="58" height="19" rx="9.5" fill="#e4e4db" stroke="#b5b5a5" stroke-width="1.5" transform="rotate(14, 35, 171)"/>
+          <g transform="translate(1, 168)">
+            <ellipse cx="4"  cy="10" rx="5"   ry="6.5" fill="white" stroke="#ddd" stroke-width="1"/>
+            <ellipse cx="12" cy="6"  rx="6"   ry="7.5" fill="white" stroke="#ddd" stroke-width="1"/>
+            <ellipse cx="21" cy="7"  rx="6"   ry="7"   fill="white" stroke="#ddd" stroke-width="1"/>
+            <ellipse cx="30" cy="10" rx="4.5" ry="6"   fill="white" stroke="#ddd" stroke-width="1"/>
+            <rect x="0" y="10" width="34" height="44" rx="4" fill="url(#beer-f)" stroke="#9a6c12" stroke-width="1.5"/>
+            <rect x="5" y="15" width="7" height="32" rx="3.5" fill="white" opacity="0.18"/>
+            <path d="M34,20 Q50,20 50,32 Q50,46 34,46" fill="none" stroke="#9a6c12" stroke-width="4.5" stroke-linecap="round"/>
+          </g>
+          <rect x="196" y="162" width="52" height="19" rx="9.5" fill="#e4e4db" stroke="#b5b5a5" stroke-width="1.5" transform="rotate(-14, 222, 171)"/>
+          <circle cx="130" cy="148" r="88" fill="url(#ball-f)" stroke="#c2c2ba" stroke-width="1.5"/>
+          <g fill="none" stroke-linecap="round" opacity="0.55">
+            <path d="M197,143 Q192,129 196,114 Q200,99 195,85" stroke="#aaa" stroke-width="2.5"/>
+            <path d="M200,141 Q196,127 199,112 Q202,97 198,83" stroke="#bbb" stroke-width="1.8"/>
+            <path d="M194,140 Q189,126 192,112" stroke="#ccc" stroke-width="1.3"/>
+          </g>
+          <ellipse cx="105" cy="126" rx="13" ry="15" fill="white" stroke="#888" stroke-width="1.5"/>
+          <ellipse cx="105" cy="128" rx="8.5" ry="10" fill="url(#iris-f)"/>
+          <circle cx="101" cy="124" r="2.8" fill="white" opacity="0.85"/>
+          <path d="M92,119 Q105,113 118,119" fill="#ebebE2" stroke="#bbbba8" stroke-width="1.2" stroke-linecap="round"/>
+          <ellipse cx="155" cy="126" rx="13" ry="15" fill="white" stroke="#888" stroke-width="1.5"/>
+          <ellipse cx="155" cy="128" rx="8.5" ry="10" fill="url(#iris-f)"/>
+          <circle cx="151" cy="124" r="2.8" fill="white" opacity="0.85"/>
+          <path d="M142,119 Q155,113 168,119" fill="#ebebE2" stroke="#bbbba8" stroke-width="1.2" stroke-linecap="round"/>
+          <path d="M96,160 Q116,176 150,167 Q162,162 166,153" fill="none" stroke="#666" stroke-width="2.8" stroke-linecap="round"/>
+          <g transform="translate(162, 153) rotate(-10)">
+            <rect x="0" y="-3.5" width="10" height="7" rx="2.5" fill="#c07848" stroke="#a05830" stroke-width="0.8"/>
+            <rect x="9" y="-3.5" width="28" height="7" rx="1.5" fill="#f6f1e8" stroke="#ddd" stroke-width="0.8"/>
+            <circle cx="38" cy="0" r="5" fill="#ff4800" opacity="0.85"/>
+            <circle cx="38" cy="0" r="3" fill="#ff9018"/>
+            <circle cx="37" cy="-1" r="1.4" fill="#ffe070" opacity="0.9"/>
+          </g>
+        </g>
+      </svg>
+    </div>
+
+    <div class="marquee-title">
+      <div class="mt-super">★ THE MAJOR POOL ★</div>
+      <h1 class="mt-title">PGA<br>CHAMPIONSHIP</h1>
+      <div class="mt-sub">EST. 2026 · DRINK · SMOKE · WIN</div>
+    </div>
+
+    <div class="coin-slot" aria-hidden="true">
+      INSERT<br>COIN
+      <div class="slot-rect"></div>
+      1 / PLAY
+    </div>
+  </header>
+
+  <div class="screen-bezel">
+    <div class="screen-inner">
+      <div class="screen-content">
+
+        <div class="hud">
+          <div class="hud-left">P1 · ROUND 4 OF 4</div>
+          <div class="hud-mid">★ LIVE BOARD ★</div>
+          <div class="hud-right">BEST 4 OF 5</div>
+        </div>
+
+        <div class="kpis">
+          <div class="kpi"><div class="kpi-label">ROUND</div><div class="kpi-value">4 / 4</div></div>
+          <div class="kpi warn"><div class="kpi-label">CUT PENALTY</div><div class="kpi-value" id="stat-cut">—</div></div>
+          <div class="kpi cool"><div class="kpi-label">ENTRIES</div><div class="kpi-value" id="stat-entries">—</div></div>
+          <div class="kpi gn"><div class="kpi-label">LIVE HOLES</div><div class="kpi-value" id="stat-live">—</div></div>
+        </div>
+
+        <div class="stand-hdr">
+          <span class="lbl">STANDINGS</span>
+          <span class="bar"></span>
+        </div>
+
+        <div class="cols" role="row">
+          <span>RANK</span>
+          <span>PLAYER</span>
+          <span class="right col-status">STATUS</span>
+          <span class="right">SCORE</span>
+        </div>
+
+        <div id="board" role="table" aria-label="Pool standings"></div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="control">
+    <div class="stick" aria-hidden="true">
+      <div class="base"></div>
+      <div class="shaft"></div>
+      <div class="ball"></div>
+    </div>
+    <button class="btn-1p" id="updateBtn" type="button">1P · REFRESH</button>
+    <div class="panel-meta">
+      LAST PULL
+      <span class="updated" id="updatedLabel">JUST NOW</span>
+    </div>
+  </div>
+
+  <div class="base" aria-hidden="true">
+    <span class="grille"></span>
+    <span class="badge">MAJOR POOL · 2026</span>
+    <span class="grille"></span>
+  </div>
+
+</section>
+
+<script src="data.js"></script>
+<script>
+  const { GOLFERS, PAR, standings, cutPenalty, fmtToPar, pickLabel } = window.MOCK;
+
+  function scoreClass(n) {
+    if (n === 0) return 'even';
+    return n < 0 ? '' : 'over';
+  }
+
+  function rowHtml(row, idx) {
+    const isLive = row.livePicks > 0;
+    const topCls = idx === 0 ? 'top1' : idx === 1 ? 'top2' : idx === 2 ? 'top3' : 'rest';
+    const liveCell = isLive
+      ? `<span class="on">R4 LIVE</span>`
+      : `<span>THRU R${row.roundsScored}</span>`;
+    return `
+      <div class="row ${topCls} ${isLive ? 'is-live' : ''}" data-id="${row.entry.id}"
+           role="row" tabindex="0" aria-expanded="false">
+        <span class="r-rank">${row.posDisplay}</span>
+        <span>
+          <div class="r-name">${row.entry.name}</div>
+          <div class="r-meta">${row.picks.length} picks · TB ${fmtToPar(row.entry.tiebreaker)}</div>
+        </span>
+        <span class="right r-status col-status">${liveCell}</span>
+        <span class="right r-score ${scoreClass(row.toPar)}">${fmtToPar(row.toPar)}</span>
+      </div>
+      <div class="panel">${panelHtml(row)}</div>
+    `;
+  }
+
+  function panelHtml(row) {
+    const picks = [...row.picks].sort((a, b) => a.sum - b.sum);
+    const droppedRank = row.droppedRank;
+    const cell = (n, status) => {
+      if (status === 'mc' || status === 'wd') return `<span class="cell r-dim">—</span>`;
+      if (n === null || n === undefined) return `<span class="cell r-dim">—</span>`;
+      const c = n < 0 ? 'r-neg' : n > 0 ? 'r-pos' : '';
+      return `<span class="cell ${c}">${fmtToPar(n)}</span>`;
+    };
+    const rows = picks.map(p => {
+      const lbl = pickLabel(p);
+      const tag = lbl
+        ? `<span class="tag tag-${lbl.toLowerCase()}">${lbl}</span>`
+        : p.live ? `<span class="tag tag-live">LIVE</span>`
+        : (p.rank === droppedRank ? `<span class="tag tag-drop">DROP</span>` : '');
+      const dropCls = p.rank === droppedRank ? 'dropped' : '';
+      const last = p.name.split(' ').slice(-1)[0].toUpperCase();
+      const sumCls = p.sum < 0 ? 'r-neg' : p.sum > 0 ? 'r-pos' : '';
+      return `
+        <span class="cell pname ${dropCls}">${last}${tag}</span>
+        ${cell(p.rounds[0], p.status)}
+        ${cell(p.rounds[1], p.status)}
+        ${cell(p.rounds[2], p.status)}
+        ${cell(p.rounds[3], p.status)}
+        <span class="cell right ${sumCls} ${dropCls}">${fmtToPar(p.sum)}</span>
+      `;
+    }).join('');
+    return `
+      <div class="pg">
+        <span class="h">PLAYER</span>
+        <span class="h">R1</span>
+        <span class="h">R2</span>
+        <span class="h">R3</span>
+        <span class="h">R4</span>
+        <span class="h right">SUM</span>
+        ${rows}
+        <span class="total" style="grid-column: 1 / 6">BEST 4 OF 5 · TEAM TOTAL</span>
+        <span class="total">${fmtToPar(row.toPar)}</span>
+      </div>
+    `;
+  }
+
+  function render() {
+    const rows = standings();
+    document.getElementById('stat-cut').textContent = fmtToPar(cutPenalty());
+    document.getElementById('stat-entries').textContent = rows.length;
+    document.getElementById('stat-live').textContent =
+      rows.reduce((a, r) => a + r.liveHolesLeft, 0);
+    document.getElementById('board').innerHTML = rows.map(rowHtml).join('');
+    bindRows();
+  }
+
+  let openId = null;
+  function bindRows() {
+    document.querySelectorAll('.row').forEach(r => {
+      r.addEventListener('click', () => toggleRow(r));
+      r.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleRow(r); }
+        else if (e.key === 'Escape') {
+          const open = document.querySelector('.row.open');
+          if (open) { open.classList.remove('open'); open.setAttribute('aria-expanded', 'false'); openId = null; }
+        }
+      });
+    });
+    if (openId) {
+      const r = document.querySelector(`.row[data-id="${openId}"]`);
+      if (r) { r.classList.add('open'); r.setAttribute('aria-expanded', 'true'); }
+      else openId = null;
+    }
+  }
+  function toggleRow(r) {
+    const id = r.dataset.id;
+    document.querySelectorAll('.row.open').forEach(other => {
+      if (other !== r) { other.classList.remove('open'); other.setAttribute('aria-expanded', 'false'); }
+    });
+    const willOpen = !r.classList.contains('open');
+    r.classList.toggle('open', willOpen);
+    r.setAttribute('aria-expanded', String(willOpen));
+    openId = willOpen ? id : null;
+  }
+
+  let fetchedAt = Date.now();
+  function refreshTimestamp() {
+    const mins = Math.floor((Date.now() - fetchedAt) / 60000);
+    document.getElementById('updatedLabel').textContent =
+      (mins < 1 ? 'JUST NOW' : mins + ' MIN AGO');
+  }
+  setInterval(refreshTimestamp, 20000);
+
+  document.getElementById('updateBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    Object.values(GOLFERS).forEach(g => {
+      if (g.live && g.live.thru < 18) g.live.thru = Math.min(18, g.live.thru + 2);
+    });
+    fetchedAt = Date.now();
+    refreshTimestamp();
+    render();
+  });
+
+  render();
+</script>
+</body>
+</html>
